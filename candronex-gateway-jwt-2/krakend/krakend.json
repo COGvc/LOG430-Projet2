@@ -1,0 +1,195 @@
+{
+  "$schema": "https://www.krakend.io/schema/v2.7/krakend.json",
+  "version": 3,
+  "name": "CanDroneX API Gateway",
+  "port": 8080,
+  "timeout": "5s",
+  "output_encoding": "no-op",
+  "extra_config": {
+    "security/cors": {
+      "allow_origins": [
+        "*"
+      ],
+      "allow_methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE"
+      ],
+      "allow_headers": [
+        "Authorization",
+        "Content-Type",
+        "Idempotency-Key",
+        "X-Correlation-Id"
+      ],
+      "expose_headers": [
+        "X-Correlation-Id"
+      ]
+    }
+  },
+  "endpoints": [
+    {
+      "@comment": "UC-01 - Onboarder un client B2B : reserve a l'administrateur (portee clients:create)",
+      "endpoint": "/api/client-management/v1/client",
+      "method": "POST",
+      "input_headers": [
+        "Authorization",
+        "X-Client-Id",
+        "Content-Type",
+        "Idempotency-Key",
+        "X-Correlation-Id"
+      ],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "host": [
+            "http://client-management-service:5001"
+          ],
+          "url_pattern": "/api/client-management/v1/client",
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8080/realms/candronex/protocol/openid-connect/certs",
+          "disable_jwk_security": true,
+          "issuer": "http://localhost:8081/realms/candronex",
+          "audience": [
+            "candronex-api"
+          ],
+          "scopes_key": "scope",
+          "scopes": [
+            "clients:create"
+          ],
+          "scopes_matcher": "any",
+          "cache": true,
+          "propagate_claims": [
+            [
+              "azp",
+              "X-Client-Id"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "@comment": "UC-02 - Enregistrer un drone (tout client B2B authentifie)",
+      "endpoint": "/api/drone-management/v1/drone",
+      "method": "POST",
+      "input_headers": [
+        "Authorization",
+        "X-Client-Id",
+        "Content-Type",
+        "Idempotency-Key",
+        "X-Correlation-Id"
+      ],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "host": [
+            "http://drone-management-service:5002"
+          ],
+          "url_pattern": "/api/drone-management/v1/drone",
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8080/realms/candronex/protocol/openid-connect/certs",
+          "disable_jwk_security": true,
+          "issuer": "http://localhost:8081/realms/candronex",
+          "audience": [
+            "candronex-api"
+          ],
+          "cache": true,
+          "propagate_claims": [
+            [
+              "azp",
+              "X-Client-Id"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "endpoint": "/api/drone-management/v1/drone",
+      "method": "GET",
+      "input_headers": [
+        "Authorization",
+        "X-Client-Id",
+        "Content-Type",
+        "Idempotency-Key",
+        "X-Correlation-Id"
+      ],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "host": [
+            "http://drone-management-service:5002"
+          ],
+          "url_pattern": "/api/drone-management/v1/drone",
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8080/realms/candronex/protocol/openid-connect/certs",
+          "disable_jwk_security": true,
+          "issuer": "http://localhost:8081/realms/candronex",
+          "audience": [
+            "candronex-api"
+          ],
+          "cache": true,
+          "propagate_claims": [
+            [
+              "azp",
+              "X-Client-Id"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "endpoint": "/api/drone-management/v1/drone/{droneId}",
+      "method": "GET",
+      "input_headers": [
+        "Authorization",
+        "X-Client-Id",
+        "Content-Type",
+        "Idempotency-Key",
+        "X-Correlation-Id"
+      ],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "host": [
+            "http://drone-management-service:5002"
+          ],
+          "url_pattern": "/api/drone-management/v1/drone/{droneId}",
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://keycloak:8080/realms/candronex/protocol/openid-connect/certs",
+          "disable_jwk_security": true,
+          "issuer": "http://localhost:8081/realms/candronex",
+          "audience": [
+            "candronex-api"
+          ],
+          "cache": true,
+          "propagate_claims": [
+            [
+              "azp",
+              "X-Client-Id"
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

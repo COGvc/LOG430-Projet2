@@ -1,0 +1,123 @@
+{
+  "realm": "candronex",
+  "enabled": true,
+  "accessTokenLifespan": 300,
+  "defaultDefaultClientScopes": [
+    "candronex-api-audience"
+  ],
+  "clientScopes": [
+    {
+      "name": "candronex-api-audience",
+      "description": "Ajoute l'audience candronex-api (claim aud) aux jetons destines a l'API CanDroneX",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience candronex-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "candronex-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "clients:create",
+      "description": "Onboarder un client B2B (administrateur de plateforme)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "candronex-admin",
+      "name": "Administrateur de plateforme CanDroneX",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${CANDRONEX_ADMIN_SECRET}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": [
+        "candronex-api-audience",
+        "clients:create"
+      ]
+    },
+    {
+      "clientId": "client-management-service",
+      "name": "Compte technique de client-management-service (API d'administration Keycloak)",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${CLIENT_MANAGEMENT_SERVICE_SECRET}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "description": "Appelle l'API d'administration de Keycloak, pas l'API CanDroneX : pas d'audience candronex-api",
+      "defaultClientScopes": []
+    },
+    {
+      "clientId": "inspectra-demo",
+      "name": "Inspectra Drone Services (demonstration)",
+      "description": "Client B2B de demonstration (Phase 2)",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${INSPECTRA_DEMO_SECRET}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "aerotech-demo",
+      "name": "Aerotech Inspection (demonstration)",
+      "description": "Client B2B de demonstration (Phase 2)",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${AEROTECH_DEMO_SECRET}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "jeton-court",
+      "name": "Tests seulement : jeton de 5 s pour verifier le rejet d'un jeton expire",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${JETON_COURT_SECRET}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "attributes": {
+        "access.token.lifespan": "5"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-client-management-service",
+      "enabled": true,
+      "serviceAccountClientId": "client-management-service",
+      "clientRoles": {
+        "realm-management": [
+          "manage-clients",
+          "view-clients"
+        ]
+      }
+    }
+  ]
+}

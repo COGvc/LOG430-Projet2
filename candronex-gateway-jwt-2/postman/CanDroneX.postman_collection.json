@@ -1,0 +1,206 @@
+{
+  "info": {
+    "name": "CanDroneX",
+    "description": "« Jeton d'acces aux drones » sert aux requetes drones. « Jeton admin » sert uniquement a creer un client.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "keycloak", "value": "http://localhost:8081" },
+    { "key": "gateway", "value": "http://localhost:8088" },
+    { "key": "drone_token", "value": "" },
+    { "key": "admin_token", "value": "" },
+    { "key": "drone_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Jeton d'acces aux drones",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('jeton drones recu', function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(body.access_token).to.be.a('string').and.not.empty;",
+              "});",
+              "if (body.access_token) {",
+              "    pm.collectionVariables.set('drone_token', body.access_token);",
+              "    const partie = body.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
+              "    const payload = JSON.parse(atob(partie + '='.repeat((4 - partie.length % 4) % 4)));",
+              "    console.log('drone_token enregistre, azp=' + payload.azp);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "grant_type", "value": "client_credentials", "type": "text" },
+            { "key": "client_id", "value": "inspectra-demo", "type": "text" },
+            { "key": "client_secret", "value": "changez-moi-inspectra", "type": "text" }
+          ]
+        },
+        "url": {
+          "raw": "{{keycloak}}/realms/candronex/protocol/openid-connect/token",
+          "host": ["{{keycloak}}"],
+          "path": ["realms", "candronex", "protocol", "openid-connect", "token"]
+        },
+        "description": "POST Keycloak : jeton d'acces aux drones pour inspectra-demo. Enregistre drone_token. A lancer avant les requetes drones."
+      }
+    },
+    {
+      "name": "2. Jeton admin",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('jeton admin recu', function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(body.access_token).to.be.a('string').and.not.empty;",
+              "});",
+              "if (body.access_token) {",
+              "    pm.collectionVariables.set('admin_token', body.access_token);",
+              "    const partie = body.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
+              "    const payload = JSON.parse(atob(partie + '='.repeat((4 - partie.length % 4) % 4)));",
+              "    console.log('admin_token enregistre, scope=' + payload.scope);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "grant_type", "value": "client_credentials", "type": "text" },
+            { "key": "client_id", "value": "candronex-admin", "type": "text" },
+            { "key": "client_secret", "value": "changez-moi-admin", "type": "text" }
+          ]
+        },
+        "url": {
+          "raw": "{{keycloak}}/realms/candronex/protocol/openid-connect/token",
+          "host": ["{{keycloak}}"],
+          "path": ["realms", "candronex", "protocol", "openid-connect", "token"]
+        },
+        "description": "Jeton de candronex-admin, portee clients:create. Enregistre admin_token. A lancer avant « Creer un client »."
+      }
+    },
+    {
+      "name": "3. GET drones",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{drone_token}}", "type": "string" }]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{gateway}}/api/drone-management/v1/drone",
+          "host": ["{{gateway}}"],
+          "path": ["api", "drone-management", "v1", "drone"]
+        },
+        "description": "Lance d'abord « 1. Jeton d'acces aux drones ». Attendu : 200."
+      }
+    },
+    {
+      "name": "4. POST drone",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    const body = pm.response.json();",
+              "    if (body.droneId) pm.collectionVariables.set('drone_id', body.droneId);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{drone_token}}", "type": "string" }]
+        },
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"imsi\": \"302720000000001\",\n  \"modele\": \"M300\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{gateway}}/api/drone-management/v1/drone",
+          "host": ["{{gateway}}"],
+          "path": ["api", "drone-management", "v1", "drone"]
+        },
+        "description": "Attendu : 201. Enregistre drone_id pour la requete suivante."
+      }
+    },
+    {
+      "name": "5. GET un drone",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{drone_token}}", "type": "string" }]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{gateway}}/api/drone-management/v1/drone/{{drone_id}}",
+          "host": ["{{gateway}}"],
+          "path": ["api", "drone-management", "v1", "drone", "{{drone_id}}"]
+        }
+      }
+    },
+    {
+      "name": "6. Creer un client",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.variables.set('nom_client', 'Client Postman ' + Date.now());"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{admin_token}}", "type": "string" }]
+        },
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nom\": \"{{nom_client}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{gateway}}/api/client-management/v1/client",
+          "host": ["{{gateway}}"],
+          "path": ["api", "client-management", "v1", "client"]
+        },
+        "description": "Lance d'abord « 2. Jeton admin ». Utilise admin_token (portee clients:create). Attendu : 201."
+      }
+    }
+  ]
+}

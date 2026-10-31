@@ -93,9 +93,38 @@ services:
       interval: 3s
       retries: 20
 
+  slice-management-service:
+    <<: *service-commun
+    build: { context: ., dockerfile: services/slice-management-service/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://slice:${SLICE_DB_PASSWORD}@slice-db:5432/slice
+      NETWORK_ADAPTER: mock
+      # MockOpen5GSAdapter : latence par activation et taux d'échec (énoncé : 300-1500 ms, 0 %)
+      MOCK_LATENCE_MIN_MS: ${MOCK_LATENCE_MIN_MS:-300}
+      MOCK_LATENCE_MAX_MS: ${MOCK_LATENCE_MAX_MS:-1500}
+      MOCK_TAUX_ECHEC: ${MOCK_TAUX_ECHEC:-0}
+      ACTIVATION_CONCURRENCE: ${ACTIVATION_CONCURRENCE:-500}
+    networks: [backend, slice-data]
+    depends_on:
+      slice-db: { condition: service_healthy }
+
+  slice-db:
+    <<: *base-commune
+    environment:
+      POSTGRES_DB: slice
+      POSTGRES_USER: slice
+      POSTGRES_PASSWORD: ${SLICE_DB_PASSWORD}
+    networks: [slice-data]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "slice", "-d", "slice"]
+      interval: 3s
+      retries: 20
+
 networks:
   backend:
   drone-data:
     internal: true
   ordering-data:
+    internal: true
+  slice-data:
     internal: true

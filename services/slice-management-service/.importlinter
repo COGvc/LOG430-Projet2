@@ -1,0 +1,30 @@
+# Règles de dépendance de l'architecture hexagonale (conception, étape 5 §8.2).
+[importlinter]
+root_package = app
+include_external_packages = True
+
+[importlinter:contract:domaine-pur]
+name = Le domaine n'importe ni framework ni autre couche
+type = forbidden
+source_modules = app.domain
+forbidden_modules = fastapi
+    starlette
+    pydantic
+    asyncpg
+    httpx
+    jwt
+    candronex_common
+    app.application
+    app.adapters_db
+    app.reseau
+    app.main
+
+[importlinter:contract:application]
+name = L'application ne dépend d'aucun adaptateur ni framework
+type = forbidden
+source_modules = app.application
+forbidden_modules = fastapi
+    asyncpg
+    httpx
+    app.adapters_db
+    app.main

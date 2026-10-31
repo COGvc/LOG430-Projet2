@@ -13,7 +13,7 @@ from candronex_common.clienthttp import DependanceIndisponible, Disjoncteur, cre
 from candronex_common.erreurs import ErreurApi
 from candronex_common.jeton import client_courant
 
-from . import adapters_db, catalog
+from . import adapters_db, catalog, catalog_db
 from .adapters_http import DemandeActivationHttp, EligibiliteDroneHttp, EtatServicesHttp
 from .application import GestionCommandes, Relance, VueCommande
 from .domain import (CleIdempotenceReutilisee, Commande, CommandeIntrouvable, CommandeInvalide, DroneIntrouvable,
@@ -32,9 +32,8 @@ async def lifespan(_):
     pool = await asyncpg.create_pool(os.environ["DATABASE_URL"], min_size=2, max_size=int(os.environ.get("DB_POOL", "20")))
     async with pool.acquire() as c, c.transaction():
         await c.execute("SELECT pg_advisory_xact_lock(1)")
-        await c.execute(catalog.SCHEMA + adapters_db.SCHEMA)
-    catalogue = catalog.Catalogue(pool)
-    await catalogue.charger()
+        await c.execute(catalog_db.SCHEMA + adapters_db.SCHEMA)
+    catalogue = catalog.Catalogue(await catalog_db.charger(pool))
     depot = adapters_db.DepotCommandesPostgres(pool)
     drones = creer_client(DRONE_URL, float(os.environ.get("D1_DELAI_S", "1")))
     slices_lecture = creer_client(SLICE_URL, float(os.environ.get("D3_DELAI_S", "1")))

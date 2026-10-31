@@ -1,0 +1,101 @@
+# CanDroneX Phase 2 — microservices.
+# Seuls la passerelle (8080) et Keycloak (8081, pour obtenir un jeton) sont publiés sur l'hôte.
+# Chaque base est sur un réseau privé partagé avec son seul service (conception, étape 6 §8).
+
+x-service-commun: &service-commun
+  restart: unless-stopped
+  networks: [backend]
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+    interval: 5s
+    retries: 20
+
+x-base-commune: &base-commune
+  image: postgres:16-alpine
+  restart: unless-stopped
+  command: ["postgres", "-c", "max_connections=300", "-c", "synchronous_commit=off"]
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev --import-realm --http-port=8080
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+      # Émetteur (iss) fixe, que le jeton soit obtenu via localhost:8081 ou keycloak:8080
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+      CANDRONEX_ADMIN_SECRET: ${CANDRONEX_ADMIN_SECRET}
+      CLIENT_MANAGEMENT_SERVICE_SECRET: ${CLIENT_MANAGEMENT_SERVICE_SECRET}
+      INSPECTRA_DEMO_SECRET: ${INSPECTRA_DEMO_SECRET}
+      AEROTECH_DEMO_SECRET: ${AEROTECH_DEMO_SECRET}
+      JETON_COURT_SECRET: ${JETON_COURT_SECRET}
+    volumes:
+      - ./keycloak/realm-candronex.json:/opt/keycloak/data/import/realm-candronex.json:ro
+    ports:
+      - "8081:8080"
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q 'UP' <&3"]
+      interval: 10s
+      retries: 20
+
+  api-gateway:
+    image: devopsfaith/krakend:2.7.2
+    volumes:
+      - ./krakend/krakend.json:/etc/krakend/krakend.json:ro
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    networks: [backend]
+    depends_on:
+      keycloak: { condition: service_healthy }
+
+  drone-management-service:
+    <<: *service-commun
+    build: { context: ., dockerfile: services/drone-management-service/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://drone:${DRONE_DB_PASSWORD}@drone-db:5432/drone
+    networks: [backend, drone-data]
+    depends_on:
+      drone-db: { condition: service_healthy }
+
+  drone-db:
+    <<: *base-commune
+    environment:
+      POSTGRES_DB: drone
+      POSTGRES_USER: drone
+      POSTGRES_PASSWORD: ${DRONE_DB_PASSWORD}
+    networks: [drone-data]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "drone", "-d", "drone"]
+      interval: 3s
+      retries: 20
+
+  service-ordering-service:
+    <<: *service-commun
+    build: { context: ., dockerfile: services/service-ordering-service/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://ordering:${ORDERING_DB_PASSWORD}@ordering-db:5432/ordering
+    networks: [backend, ordering-data]
+    depends_on:
+      ordering-db: { condition: service_healthy }
+
+  ordering-db:
+    <<: *base-commune
+    environment:
+      POSTGRES_DB: ordering
+      POSTGRES_USER: ordering
+      POSTGRES_PASSWORD: ${ORDERING_DB_PASSWORD}
+    networks: [ordering-data]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "ordering", "-d", "ordering"]
+      interval: 3s
+      retries: 20
+
+networks:
+  backend:
+  drone-data:
+    internal: true
+  ordering-data:
+    internal: true

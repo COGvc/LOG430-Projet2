@@ -1,0 +1,9 @@
+.git
+docs
+notes
+*.docx
+*.pdf
+Brief.txt
+candronex-gateway-jwt-2
+load
+**/__pycache__

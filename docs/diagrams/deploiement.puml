@@ -1,0 +1,54 @@
+@startuml deploiement
+title Vue Déploiement — Phase 2 (un hôte, docker compose up)
+skinparam componentStyle rectangle
+
+actor "Client B2B\n(application, k6)" as Client
+
+node "Hôte (poste de développement)" {
+  node "Docker Compose" {
+
+    package "réseau backend" as Backend #F5F5FF {
+      component "api-gateway\nKrakenD CE 2.7\n:8080" as GW
+      component "keycloak (fourni)\nrealm candronex\n:8080 interne" as KC
+      component "drone-management-service\nFastAPI :8000" as DS
+      component "service-ordering-service\nFastAPI :8000\n(API + relance)" as OS
+      component "slice-management-service\nFastAPI :8000\n(API + activation\n+ MockOpen5GSAdapter)" as SS
+    }
+
+    package "réseau drone-data" as DData #F5FFF5 {
+      database "drone-db\nPostgreSQL" as DDB
+    }
+    package "réseau ordering-data" as OData #F5FFF5 {
+      database "ordering-db\nPostgreSQL" as ODB
+    }
+    package "réseau slice-data" as SData #F5FFF5 {
+      database "slice-db\nPostgreSQL" as SDB
+    }
+  }
+}
+
+Client --> GW : HTTP :8080 (publié)\nBearer <JWT>
+Client --> KC : HTTP :8081 (publié)\nclient credentials
+
+GW --> DS : /api/drone-management/v1
+GW --> OS : /api/service-ordering/v1
+GW --> SS : /api/slice-management/v1
+GW ..> KC : JWKS (en cache)
+DS ..> KC : JWKS (en cache)
+OS ..> KC : JWKS (en cache)
+SS ..> KC : JWKS (en cache)
+
+OS --> DS : D1 (jeton)
+OS --> SS : D2 /internal (sans jeton)\nD3 (jeton)
+SS --> DS : D4 /internal (sans jeton)
+
+DS --> DDB
+OS --> ODB
+SS --> SDB
+
+note bottom of SData
+  Aucun port publié pour les services ni les bases.
+  Chaque base n'est joignable que par son service
+  (réseau privé partagé avec lui seul).
+end note
+@enduml

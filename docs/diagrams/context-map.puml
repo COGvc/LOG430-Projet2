@@ -1,0 +1,34 @@
+@startuml context-map
+title CanDroneX — Context map (Phase 2)
+skinparam rectangle {
+  RoundCorner 15
+}
+skinparam defaultTextAlignment center
+
+rectangle "**Gestion des drones**\n<<cœur>>\ndrone, droneId, IMSI, ICCID" as Drones
+rectangle "**Catalogue de services**\n<<support>>\nspécification, caractéristiques" as Catalogue
+rectangle "**Commande de services**\n<<cœur>>\ncommande, élément,\ncaractéristiques figées" as Commande
+rectangle "**Activation**\n<<cœur>>\ndemande d'activation, issue" as Activation
+rectangle "**Inventaire de services**\n<<cœur>>\nservice, état, cause" as Inventaire
+
+rectangle "**Accès B2B**\n<<générique — externe>>\nKeycloak : jeton, azp" as Acces #EEEEEE
+rectangle "**Réseau 5G**\n<<système tiers — simulé>>\nprofil d'abonné, tranches" as Reseau #EEEEEE
+
+Drones "U" --> "D" Commande : client / fournisseur\nOHS : existence, statut, propriétaire\n(jamais l'IMSI)
+Drones "U" --> "D" Activation : client / fournisseur\nendpoint interne : IMSI à l'activation
+Catalogue "U" --> "D" Commande : valeurs copiées\nà la soumission
+Activation "U" --> "D" Commande : OHS : demande d'activation\net état des services
+Activation -right- Inventaire : même modèle\n(même service)
+Reseau "U" --> "D" Activation : ACL\nNetworkProvisioningPort
+
+Acces "U" ..> "D" Drones : conformiste
+Acces "U" ..> "D" Commande : conformiste
+Acces "U" ..> "D" Activation : conformiste
+
+legend right
+  U = amont (upstream), D = aval (downstream)
+  OHS = open host service (API publiée)
+  ACL = couche anticorruption
+  Gris = hors CanDroneX
+endlegend
+@enduml

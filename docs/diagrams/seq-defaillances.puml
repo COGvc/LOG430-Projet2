@@ -1,0 +1,59 @@
+@startuml seq-defaillances
+title Défaillances — services indisponibles et échecs du réseau simulé
+
+actor "Client B2B" as Client
+participant "service-ordering-service\n(API)" as OAPI
+participant "service-ordering-service\n(relance)" as Relay
+participant "slice-management-service\n(API interne)" as SAPI
+participant "slice-management-service\n(activation)" as Worker
+participant "MockOpen5GSAdapter" as Mock
+participant "drone-management-service" as DS
+
+== ① drone-management-service indisponible pendant la commande (D1) ==
+Client -> OAPI : POST /api/service-ordering/v1/serviceOrder (Idempotency-Key: k-43)
+OAPI -> DS : D1 GET /api/drone-management/v1/drone/{droneId}
+DS -->x OAPI : délai de 1 s dépassé
+OAPI --> Client : 503 DEPENDANCE_INDISPONIBLE\n(aucune commande créée, aucune reprise ici)
+note right of Client : Le client rejoue plus tard\navec la même clé k-43.
+
+== ② slice-management-service indisponible après la commande (D2) ==
+Relay -> SAPI : D2 POST /internal/v1/activation (SOI-1001-1)
+SAPI -->x Relay : connexion refusée
+Relay -> Relay : dispatch reste PENDING\nnextDispatchAt = maintenant + recul (200 ms, 400 ms, ... ≤ 5 s, aléatoire)
+Relay -> Relay : 5 échecs consécutifs → disjoncteur OUVERT (5 s)
+...slice-management-service redémarre...
+Relay -> SAPI : appel d'essai (semi-ouvert)
+SAPI --> Relay : 202 → disjoncteur FERMÉ, dispatch DISPATCHED
+
+== ③ slice-management-service indisponible pendant une consultation (D3) ==
+Client -> OAPI : GET /api/service-ordering/v1/serviceOrder/SO-1001
+OAPI -> SAPI : D3 GET /api/slice-management/v1/service?orderId=SO-1001
+SAPI -->x OAPI : délai de 1 s dépassé
+OAPI --> Client : 200 réponse dégradée\nstate: UNKNOWN; éléments non transmis: PENDING; autres: UNKNOWN
+
+== ④ Réseau refuse ou ne répond pas ==
+Worker -> Mock : subscribe(imsi, C2)
+alt refus simulé (taux d'échec)
+  Mock --> Worker : REJECTED
+  Worker -> Worker : → FAILED, cause NETWORK_REJECTED
+else pas de réponse en 3 s
+  Mock -->x Worker : délai dépassé
+  Worker -> Worker : → FAILED, cause NETWORK_INDETERMINATE\n(vérifier avant toute reprise : UC-10)
+end
+note right of Worker
+  L'autre service de la commande poursuit seul.
+  C2 FAILED + IMAGERY ACTIVE → commande PARTIAL.
+end note
+
+== ⑤ drone-management-service indisponible pendant l'activation (D4) ==
+Worker -> DS : D4 GET /internal/v1/drone/{droneId}/network-identity
+DS -->x Worker : connexion refusée
+Worker -> Worker : → PENDING, attempts + 1,\nnextAttemptAt = maintenant + recul
+Worker -> Worker : 5 échecs consécutifs → disjoncteur OUVERT :\naucune prise en charge pendant 5 s
+alt drone-management-service revient avant 30 s après acceptedAt
+  Worker -> DS : D4 (semi-ouvert)
+  DS --> Worker : { imsi } → suite normale de UC-06
+else échéance de 30 s atteinte
+  Worker -> Worker : → FAILED, cause IDENTITY_UNRESOLVED\n(aucun appel au réseau)
+end
+@enduml

@@ -1,0 +1,69 @@
+@startuml seq-uc04-uc06
+title UC-04 puis UC-06 — Commande C2 + Imagerie pour DRN-0231, jusqu'à l'état ACTIVE
+autonumber
+
+actor "Client B2B" as Client
+participant "API Gateway" as GW
+box "service-ordering-service" #F5F5FF
+  participant "API commande" as OAPI
+  participant "Relance\n(arrière-plan)" as Relay
+  database "ordering-db" as ODB
+end box
+box "slice-management-service" #F5FFF5
+  participant "API\n(versionnée et /internal)" as SAPI
+  participant "Traitement\nd'activation" as Worker
+  participant "MockOpen5GSAdapter\n(NetworkProvisioningPort)" as Mock
+  database "slice-db" as SDB
+end box
+participant "drone-management-service" as DS
+
+== UC-04 : prise de commande (chemin synchrone) ==
+Client -> GW : POST /api/service-ordering/v1/serviceOrder\nBearer <JWT>, Idempotency-Key: k-42\n{ items: [ {DRN-0231, C2}, {DRN-0231, IMAGERY} ] }
+GW -> OAPI : Authorization inchangé + X-Correlation-Id
+OAPI -> OAPI : valider JWT, clientId = azp
+OAPI -> ODB : clé (clientId, k-42) déjà connue ?
+ODB --> OAPI : non
+OAPI -> DS : D1 GET /api/drone-management/v1/drone/DRN-0231\n(Bearer <JWT> transmis, réseau Docker, délai 1 s)
+DS -> DS : revalider le JWT
+DS --> OAPI : 200 { droneId, status: ACTIVE }
+OAPI -> ODB : lire le catalogue (C2, IMAGERY)
+OAPI -> ODB : BEGIN\nINSERT commande SO-1001 (acceptedAt, k-42, empreinte)\nINSERT SOI-1001-1 (C2, caractéristiques figées, dispatch PENDING)\nINSERT SOI-1001-2 (IMAGERY, ..., dispatch PENDING)\nCOMMIT
+OAPI -> OAPI : log « commande acceptée » (SO-1001)
+OAPI --> GW : 201 { orderId: SO-1001, state: ACKNOWLEDGED, items }
+GW --> Client : 201
+
+== Transmission (arrière-plan, sans jeton) ==
+Relay -> ODB : éléments dispatch PENDING
+loop pour chaque élément
+  Relay -> SAPI : D2 POST /internal/v1/activation\n{ orderItemId, orderId, clientId, droneId, serviceType, characteristics, acceptedAt }
+  SAPI -> SDB : INSERT service PENDING\n(unique orderItemId : si présent, rien)
+  SAPI --> Relay : 202 / 200 { serviceId, state: PENDING }
+  Relay -> ODB : dispatch DISPATCHED
+end
+
+== UC-06 : activation (arrière-plan, un traitement par service) ==
+Worker -> SDB : prendre un service PENDING (nextAttemptAt échu)\n→ ACTIVATING, startedAt
+Worker -> DS : D4 GET /internal/v1/drone/DRN-0231/network-identity?clientId=…\n(délai 1 s)
+DS --> Worker : { imsi } (gardé en mémoire seulement)
+Worker -> Worker : construire la configuration\n(S-NSSAI 02-000001, DNN c2, 5QI 7, ARP 2, AMBR 20/20)
+Worker -> Worker : log « appel NetworkProvisioningPort » (SO-1001, SOI-1001-1)
+Worker -> Mock : subscribe(imsi, configuration) (délai 3 s)
+Mock -> Mock : latence 300–1500 ms\nécriture conditionnelle (IMSI, S-NSSAI, DNN)
+Mock --> Worker : SUCCESS
+Worker -> SDB : → ACTIVE, activatedAt
+Worker -> Worker : log « activation réussie » (SO-1001, SOI-1001-1)
+note over Worker, Mock
+  Le même traitement a lieu, indépendamment et en parallèle,
+  pour SOI-1001-2 (IMAGERY : 01-000002, imagery, 5QI 9, ARP 8, AMBR 500/100).
+end note
+
+== Consultation ==
+Client -> GW : GET /api/service-ordering/v1/serviceOrder/SO-1001 (Bearer <JWT>)
+GW -> OAPI : Authorization inchangé
+OAPI -> ODB : commande SO-1001 de ce client ?
+OAPI -> SAPI : D3 GET /api/slice-management/v1/service?orderId=SO-1001\n(Bearer <JWT> transmis, délai 1 s)
+SAPI --> OAPI : [ SOI-1001-1 ACTIVE, SOI-1001-2 ACTIVE ]
+OAPI -> OAPI : état global dérivé = COMPLETED
+OAPI --> GW : 200 { SO-1001, COMPLETED, items: [C2 ACTIVE, IMAGERY ACTIVE] }
+GW --> Client : 200
+@enduml

@@ -1,0 +1,36 @@
+@startuml seq-refus
+title Refus — appel sans jeton valide, et accès aux données d'un autre client
+autonumber
+
+actor "Client B2B\n(inspectra-demo)" as Client
+participant "API Gateway" as GW
+participant "service-ordering-service" as OS
+database "ordering-db" as ODB
+
+== A1 : jeton absent, expiré ou invalide ==
+Client -> GW : GET /api/service-ordering/v1/serviceOrder/SO-1001\n(sans Authorization, ou JWT expiré / mal signé / autre audience)
+GW -> GW : auth/validator échoue\n(signature, exp, iss, aud)
+GW --> Client : 401 (sans corps : limite de KrakenD CE)
+note right of GW
+  Le service n'est jamais atteint.
+  S'il l'était (passerelle mal configurée,
+  appel direct sur le réseau Docker), il refuserait
+  à son tour : 401 { erreur: NON_AUTHENTIFIE, message,
+  correlationId } et log « jeton refusé » (motif, sans le jeton).
+end note
+
+== A2 : commande d'un autre client ==
+Client -> GW : GET /api/service-ordering/v1/serviceOrder/SO-2002\nBearer <JWT inspectra-demo>
+GW -> OS : Authorization inchangé
+OS -> OS : JWT valide, clientId = inspectra-demo
+OS -> ODB : SELECT commande WHERE orderId = SO-2002\nAND clientId = inspectra-demo
+ODB --> OS : aucune ligne\n(SO-2002 appartient à aerotech-demo)
+OS -> OS : log « accès refusé » (clientId, ressource)
+OS --> GW : 404 { erreur: INTROUVABLE, message, correlationId }
+GW --> Client : 404
+note right of ODB
+  Le filtre sur clientId est dans la requête du dépôt :
+  la réponse est identique à celle d'une commande
+  inexistante. L'API n'est pas un oracle d'existence.
+end note
+@enduml

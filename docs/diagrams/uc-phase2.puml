@@ -1,0 +1,30 @@
+@startuml uc-phase2
+title CanDroneX Phase 2 — Cas d'utilisation couverts
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Client B2B\n(application d'un exploitant,\njeton client credentials)" as Client
+actor "Keycloak fourni" as Keycloak <<système>>
+actor "Réseau 5G\n(simulé : MockOpen5GSAdapter)" as Reseau <<système>>
+
+rectangle "CanDroneX" {
+  usecase "UC-02\nEnregistrer un drone" as UC02
+  usecase "UC-04\nCommander les services\nd'un drone" as UC04
+  usecase "UC-06\nActiver et configurer\nune slice" as UC06
+  usecase "Consulter commande\net état des services" as Consulter
+}
+
+Client --> UC02
+Client --> UC04
+Client --> Consulter
+Client ..> Keycloak : obtient un JWT\n(hors CanDroneX)
+
+UC04 ..> UC06 : <<déclenche>>\nun par élément
+UC06 --> Reseau : abonne le drone\nà la tranche
+
+note bottom of UC06
+  Acteur principal : CanDroneX.
+  Aucun client n'appelle UC-06 directement :
+  l'activation découle de l'acceptation de la commande.
+end note
+@enduml

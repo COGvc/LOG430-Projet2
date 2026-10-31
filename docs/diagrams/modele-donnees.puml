@@ -1,0 +1,93 @@
+@startuml modele-donnees
+title CanDroneX — Modèle logique des données par service (Phase 2)
+hide methods
+skinparam classAttributeIconSize 0
+
+package "drone-management-service : drone-db" {
+  class Drone {
+    {key} clientId
+    {key} droneId
+    simType : SIM | ESIM
+    status : ACTIVE
+    registeredAt
+  }
+  class IdentiteReseau <<sensible>> {
+    {key} clientId
+    {key} droneId
+    imsi <<unique, 15 chiffres>>
+    iccid <<unique, 19-20 chiffres>>
+  }
+  Drone "1" -- "1" IdentiteReseau
+}
+
+package "service-ordering-service : ordering-db" {
+  package "schéma catalogue" {
+    class SpecificationService {
+      {key} serviceType : C2 | IMAGERY
+      name
+      description
+    }
+    class CaracteristiqueParDefaut {
+      {key} serviceType
+      {key} name
+      value
+    }
+    SpecificationService "1" *-- "7" CaracteristiqueParDefaut
+  }
+  package "schéma commande" {
+    class Commande {
+      {key} orderId : SO-1001
+      clientId
+      acceptedAt
+      idempotencyKey
+      requestFingerprint
+      --
+      unique (clientId, idempotencyKey)
+    }
+    class ElementCommande {
+      {key} orderItemId : SOI-1001-1
+      orderId
+      droneId
+      serviceType
+      action : add
+      characteristics : copie figée
+      dispatchStatus : PENDING | DISPATCHED
+      dispatchAttempts
+      nextDispatchAt
+      --
+      unique (orderId, serviceType)
+    }
+    Commande "1" *-- "1..*" ElementCommande
+  }
+}
+
+package "slice-management-service : slice-db" {
+  class Service <<inventaire>> {
+    {key} serviceId
+    orderItemId <<unique : idempotence>>
+    orderId
+    clientId
+    droneId
+    serviceType
+    characteristics : copie reçue
+    state : PENDING | ACTIVATING | ACTIVE | FAILED
+    failureCause
+    attempts
+    nextAttemptAt
+    acceptedAt
+    startedAt
+    activatedAt
+    failedAt
+  }
+}
+
+ElementCommande ..> Drone : droneId\n(référence, sans FK)
+ElementCommande ..> SpecificationService : valeurs copiées\nà la soumission
+Service ..> ElementCommande : orderItemId\n(référence, sans FK)
+Service ..> Drone : droneId\n(IMSI résolu à l'activation,\njamais stocké)
+
+note bottom of Service
+  Aucune colonne IMSI.
+  activatedAt − acceptedAt → P95 calculé dans slice-db.
+end note
+@enduml

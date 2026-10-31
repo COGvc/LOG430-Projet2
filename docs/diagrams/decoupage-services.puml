@@ -1,0 +1,38 @@
+@startuml decoupage-services
+title CanDroneX — Contextes → microservices → bases (Phase 2)
+skinparam componentStyle rectangle
+
+package "drone-management-service" as DS {
+  component "Gestion des drones" as C_Drones
+  database "drone-db\n(drones, IMSI, ICCID)" as DB_Drones
+}
+
+package "service-ordering-service" as OS {
+  component "Catalogue de services" as C_Catalogue
+  component "Commande de services" as C_Commande
+  database "ordering-db\n(spécifications, commandes,\néléments, clés d'idempotence)" as DB_Ordering
+}
+
+package "slice-management-service" as SS {
+  component "Activation" as C_Activation
+  component "Inventaire de services" as C_Inventaire
+  component "NetworkProvisioningPort\n+ MockOpen5GSAdapter" as Port
+  database "slice-db\n(services, états, causes,\nacceptedAt, activatedAt)" as DB_Slice
+}
+
+C_Drones --> DB_Drones
+C_Catalogue --> DB_Ordering
+C_Commande --> DB_Ordering
+C_Activation --> DB_Slice
+C_Inventaire --> DB_Slice
+C_Activation --> Port
+
+OS --> DS : REST : drone existe,\nappartient au client ?
+OS --> SS : REST : demande d'activation;\nétat des services
+SS --> DS : REST interne :\nIMSI du drone
+
+note bottom of SS
+  Aucun cycle : ordering → drone, ordering → slice, slice → drone.
+  Aucun service ne lit la base d'un autre.
+end note
+@enduml

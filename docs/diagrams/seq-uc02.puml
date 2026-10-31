@@ -1,0 +1,32 @@
+@startuml seq-uc02
+title UC-02 — Obtenir un jeton, puis enregistrer un drone par la passerelle
+autonumber
+
+actor "Client B2B\n(application Inspectra)" as Client
+participant "Keycloak fourni" as KC
+participant "API Gateway" as GW
+participant "drone-management-service" as DS
+database "drone-db" as DDB
+
+== Obtention du jeton (hors CanDroneX) ==
+Client -> KC : POST /realms/candronex/protocol/openid-connect/token\ngrant_type=client_credentials, client_id, client_secret
+KC --> Client : 200 access_token (JWT : iss, exp, aud=candronex-api, azp=inspectra-demo)
+
+== Appel métier ==
+Client -> GW : POST /api/drone-management/v1/drone\nAuthorization: Bearer <JWT>\n{ droneId: DRN-0231, imsi, iccid, simType }
+GW -> GW : routage, CORS,\nX-Correlation-Id (généré si absent)
+GW -> DS : même requête\nAuthorization transmis inchangé + X-Correlation-Id
+DS -> DS : valider le JWT (signature, exp, iss, aud)\nclientId = azp
+DS -> DS : valider le drone\n(IMSI 15 chiffres, ICCID 19-20, simType)
+DS -> DDB : INSERT drone + identité réseau\n(une transaction)
+alt (clientId, droneId) ou IMSI déjà présent
+  DDB --> DS : violation d'unicité
+  DS --> GW : 409 DRONE_DEJA_ENREGISTRE
+  GW --> Client : 409
+else enregistrement
+  DDB --> DS : ok
+  DS -> DS : log « drone enregistré »\n(clientId, droneId, IMSI masqué)
+  DS --> GW : 201 { droneId, simType, status: ACTIVE, registeredAt }\n(sans IMSI ni ICCID)
+  GW --> Client : 201
+end
+@enduml

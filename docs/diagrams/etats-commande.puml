@@ -1,0 +1,26 @@
+@startuml etats-commande
+title État global d'une commande — dérivé de l'état de ses éléments
+
+[*] --> ACKNOWLEDGED : commande acceptée\n/ acceptedAt
+
+ACKNOWLEDGED --> IN_PROGRESS : un élément quitte PENDING
+IN_PROGRESS --> COMPLETED : tous les éléments ACTIVE
+IN_PROGRESS --> PARTIAL : tous terminaux,\n≥ 1 ACTIVE et ≥ 1 FAILED
+IN_PROGRESS --> FAILED : tous les éléments FAILED
+
+COMPLETED --> [*]
+PARTIAL --> [*]
+FAILED --> [*]
+
+note right of PARTIAL
+  Règle BVLOS : un échec n'est jamais masqué.
+  C2 FAILED + IMAGERY ACTIVE = PARTIAL,
+  jamais COMPLETED. La réponse expose
+  toujours l'état de chaque élément.
+end note
+
+note left of ACKNOWLEDGED
+  L'état global n'est jamais stocké ni saisi :
+  il est calculé à partir des éléments.
+end note
+@enduml

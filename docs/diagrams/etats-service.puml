@@ -1,0 +1,34 @@
+@startuml etats-service
+title État d'un service commandé (un par élément de commande) — Phase 2
+
+[*] --> PENDING : demande d'activation reçue\n/ acceptedAt (de la commande)\n[idempotente sur l'élément de commande]
+
+PENDING --> ACTIVATING : prise en charge\n/ startedAt
+
+ACTIVATING --> ACTIVE : réseau confirme l'abonnement\n/ activatedAt
+ACTIVATING --> FAILED : réseau refuse\n/ cause = NETWORK_REJECTED
+ACTIVATING --> FAILED : délai dépassé ou réponse ambiguë\n/ cause = NETWORK_INDETERMINATE
+ACTIVATING --> FAILED : identité réseau non résolue\n/ cause = IDENTITY_UNRESOLVED
+
+ACTIVE --> [*]
+FAILED --> [*]
+
+note right of PENDING
+  « File d'activation » :
+  le nombre de PENDING ne doit pas
+  croître de façon continue
+  pendant le test de charge.
+end note
+
+note right of ACTIVE
+  Délai d'activation mesuré :
+  activatedAt − acceptedAt (P95 ≤ 5 s)
+end note
+
+note bottom of FAILED
+  Hors Phase 2 :
+  FAILED → PENDING (reprise, UC-10)
+  ACTIVE → DEACTIVATING → TERMINATED (UC-09)
+  PENDING → CANCELLED (UC-15)
+end note
+@enduml

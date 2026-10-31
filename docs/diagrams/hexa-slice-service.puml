@@ -1,0 +1,95 @@
+@startuml hexa-slice-service
+title slice-management-service — architecture hexagonale (ports et adaptateurs)
+left to right direction
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+actor "service-ordering-service\n(D2, D3)" as Ordering
+actor "Client B2B\n(par la passerelle)" as Client
+database "slice-db" as DB
+component "drone-management-service\n(D4)" as Drone
+cloud "Cœur 5G\n(Phase 3 : Open5GS)" as Core
+
+package "slice-management-service" {
+
+  package "Adaptateurs d'entrée" as IN #F0F0FF {
+    component "API /api/slice-management/v1\n(FastAPI + validation JWT)" as HttpPub
+    component "API interne /internal/v1\n(FastAPI, sans jeton : H3)" as HttpInt
+    component "Traitement d'activation\n(N tâches asyncio)" as Worker
+    component "Démarrage" as Boot
+  }
+
+  package "Application" as APP #FFFFF0 {
+    component "RegisterActivationRequest" as UcReg
+    component "ActivateNextDueService" as UcAct
+    component "GetServicesOfOrder" as UcOrd
+    component "GetDroneInventory" as UcInv
+    component "ResumeInterruptedActivations" as UcRes
+    component "Politiques\n(délai réseau 3 s, échéance 30 s, recul)" as Pol
+
+    interface "ServiceInventoryRepository" as PRepo
+    interface "DroneNetworkIdentityPort" as PId
+    interface "NetworkProvisioningPort" as PNet
+    interface "Clock" as PClock
+  }
+
+  package "Domaine" as DOM #F0FFF0 {
+    component "ServiceInstance\n(transitions d'état)" as Ent
+    component "ServiceCharacteristics, Snssai, Dnn,\nQosProfile, Imsi (masqué), SliceConfiguration,\nProvisioningOutcome" as VO
+  }
+
+  package "Adaptateurs de sortie" as OUT #FFF0F0 {
+    component "PostgresServiceInventory\n(asyncpg, SKIP LOCKED)" as ARepo
+    component "CircuitBreaker" as CB
+    component "HttpDroneNetworkIdentity\n(httpx, délai 1 s)" as AId
+    component "MockOpen5GSAdapter\n(latence, taux d'échec,\nécriture conditionnelle)" as AMock
+    component "Open5GSAdapter\n(Phase 3)" as AReal #DDDDDD
+    component "SystemClock" as AClock
+  }
+
+  component "bootstrap\n(point d'assemblage)" as Wiring
+}
+
+Client --> HttpPub
+Ordering --> HttpInt : D2
+Ordering --> HttpPub : D3 (jeton)
+
+HttpPub --> UcInv
+HttpInt --> UcReg
+HttpPub --> UcOrd
+Worker --> UcAct
+Boot --> UcRes
+
+UcAct --> Pol
+UcReg --> Ent
+UcAct --> Ent
+Ent --> VO
+
+UcAct --> PRepo
+UcAct --> PId
+UcAct --> PNet
+UcAct --> PClock
+UcReg --> PRepo
+UcOrd --> PRepo
+UcInv --> PRepo
+UcRes --> PRepo
+
+ARepo ..|> PRepo
+CB ..|> PId
+CB --> AId : enveloppe
+AMock ..|> PNet
+AReal ..|> PNet
+AClock ..|> PClock
+
+ARepo --> DB
+AId --> Drone
+AReal ..> Core
+
+Wiring ..> IN : construit
+Wiring ..> OUT : construit et injecte\n(NETWORK_ADAPTER=mock)
+
+note bottom of DOM
+  Le domaine n'importe que la bibliothèque standard.
+  Vérifié par import-linter.
+end note
+@enduml

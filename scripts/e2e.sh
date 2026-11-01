@@ -37,8 +37,7 @@ verifier() {  # verifier <libelle> <attendu> <obtenu>
 echo "== Jetons"
 INSP=$(jeton inspectra-demo "$INSPECTRA_DEMO_SECRET")
 AERO=$(jeton aerotech-demo "$AEROTECH_DEMO_SECRET")
-COURT=$(jeton jeton-court "$JETON_COURT_SECRET")
-verifier "jetons obtenus" 3 "$(for j in "$INSP" "$AERO" "$COURT"; do [[ -n "$j" ]] && echo x; done | wc -l | tr -d ' ')"
+verifier "jetons obtenus" 2 "$(for j in "$INSP" "$AERO"; do [[ -n "$j" ]] && echo x; done | wc -l | tr -d ' ')"
 
 echo "== UC-02 : drones"
 D1="DRN-$RUN-1"
@@ -117,6 +116,7 @@ fi
 
 if [[ "${SAUTER_JETON_COURT:-0}" != 1 ]]; then
   echo "== Expiration (jeton de 5 s)"
+  COURT=$(jeton jeton-court "$JETON_COURT_SECRET") # demandé juste avant : il expire 5 s plus tard
   verifier "jeton court encore valide" 200 "$(code "$GW$DRONES?limit=1" -H "Authorization: Bearer $COURT")"
   sleep 6
   verifier "jeton expiré" 401 "$(code "$GW$DRONES?limit=1" -H "Authorization: Bearer $COURT")"

@@ -1,0 +1,468 @@
+openapi: 3.0.3
+info:
+  title: CanDroneX — API publique (passerelle)
+  version: 2.0.0
+  description: |
+    Contrat de l'API exposée aux clients B2B par la passerelle KrakenD (Phase 2, microservices).
+    Toutes les routes exigent un jeton JWT obtenu auprès de Keycloak par client credentials;
+    il est validé par la passerelle, puis par le service. Le client est identifié par le claim `azp`
+    du jeton : chaque client ne voit que ses propres drones, commandes et services.
+
+    Erreurs : les services répondent `{erreur, message, correlationId}` avec un code en français.
+    Limite connue de KrakenD CE : un 401 émis par la passerelle (jeton absent, expiré ou invalide)
+    et un 500 dû à un délai dépassé (5 s) n'ont pas de corps.
+
+    Corrélation : l'en-tête `X-Correlation-Id` est repris s'il est valide
+    (`^[A-Za-z0-9._-]{1,128}$`), sinon généré; il est renvoyé dans la réponse et figure dans les journaux.
+servers:
+  - url: http://localhost:8080
+    description: Passerelle KrakenD (Docker Compose)
+security:
+  - keycloak: []
+tags:
+  - name: Drones
+    description: drone-management-service
+  - name: Commandes
+    description: service-ordering-service
+  - name: Services
+    description: slice-management-service
+
+paths:
+  /api/drone-management/v1/drone:
+    post:
+      tags: [Drones]
+      summary: Enregistrer un drone et son identité réseau (UC-01)
+      operationId: enregistrerDrone
+      parameters:
+        - $ref: '#/components/parameters/Correlation'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DroneEntrant' }
+      responses:
+        '201':
+          description: Drone enregistré (l'IMSI et l'ICCID ne sont jamais renvoyés).
+          headers: { X-Correlation-Id: { $ref: '#/components/headers/Correlation' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Drone' }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '409':
+          description: Drone, IMSI ou ICCID déjà enregistré.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+              example:
+                erreur: DRONE_DEJA_ENREGISTRE
+                message: Ce drone, cet IMSI ou cet ICCID est déjà enregistré.
+                correlationId: 3f2b8c1e-7d4a-4e9b-9a51-0c6d2e8f4b17
+        '500': { $ref: '#/components/responses/ErreurInterne' }
+    get:
+      tags: [Drones]
+      summary: Lister les drones du client
+      operationId: listerDrones
+      parameters:
+        - $ref: '#/components/parameters/Limite'
+        - $ref: '#/components/parameters/Correlation'
+      responses:
+        '200':
+          description: Drones du client authentifié.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Drone' }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '500': { $ref: '#/components/responses/ErreurInterne' }
+
+  /api/drone-management/v1/drone/{droneId}:
+    get:
+      tags: [Drones]
+      summary: Consulter un drone
+      operationId: consulterDrone
+      parameters:
+        - name: droneId
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+          example: DRN-0231
+        - $ref: '#/components/parameters/Correlation'
+      responses:
+        '200':
+          description: Le drone.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Drone' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '500': { $ref: '#/components/responses/ErreurInterne' }
+
+  /api/service-ordering/v1/catalog:
+    get:
+      tags: [Commandes]
+      summary: Consulter le catalogue des services
+      operationId: consulterCatalogue
+      parameters:
+        - $ref: '#/components/parameters/Correlation'
+      responses:
+        '200':
+          description: Spécifications de service offertes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Specification' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '500': { $ref: '#/components/responses/ErreurInterne' }
+
+  /api/service-ordering/v1/serviceOrder:
+    post:
+      tags: [Commandes]
+      summary: Commander des services pour un ou plusieurs drones (UC-04)
+      description: |
+        La commande est acceptée dès qu'elle est enregistrée (201, éléments PENDING); l'activation
+        sur le réseau se fait ensuite de façon asynchrone. Rejouer la même requête avec la même
+        `Idempotency-Key` renvoie la commande existante (200) sans en créer une autre.
+      operationId: commander
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: Clé choisie par le client, propre à ce client; à réutiliser pour toute nouvelle tentative.
+          schema: { type: string, maxLength: 128 }
+          example: cmd-2026-10-31-0001
+        - $ref: '#/components/parameters/Correlation'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommandeEntrante' }
+      responses:
+        '201':
+          description: Commande acceptée.
+          headers: { X-Correlation-Id: { $ref: '#/components/headers/Correlation' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommandeAcceptee' }
+        '200':
+          description: Rejeu avec la même clé et le même contenu; état courant de la commande existante.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Commande' }
+        '400':
+          description: Corps invalide (DONNEES_INVALIDES) ou en-tête Idempotency-Key absent (CLE_IDEMPOTENCE_MANQUANTE).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+              example:
+                erreur: CLE_IDEMPOTENCE_MANQUANTE
+                message: En-tête Idempotency-Key obligatoire.
+                correlationId: 3f2b8c1e-7d4a-4e9b-9a51-0c6d2e8f4b17
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '422':
+          description: |
+            Commande refusée : TYPE_SERVICE_INCONNU (service hors catalogue), DRONE_INTROUVABLE
+            (drone absent ou appartenant à un autre client) ou CLE_IDEMPOTENCE_REUTILISEE
+            (même clé, contenu différent).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+              example:
+                erreur: DRONE_INTROUVABLE
+                message: 'Drone introuvable : DRN-9999.'
+                correlationId: 3f2b8c1e-7d4a-4e9b-9a51-0c6d2e8f4b17
+        '500': { $ref: '#/components/responses/ErreurInterne' }
+        '503':
+          description: Vérification du drone impossible (drone-management-service indisponible); réessayer avec la même clé.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erreur' }
+              example:
+                erreur: DEPENDANCE_INDISPONIBLE
+                message: Vérification du drone impossible; réessayez avec la même clé.
+                correlationId: 3f2b8c1e-7d4a-4e9b-9a51-0c6d2e8f4b17
+    get:
+      tags: [Commandes]
+      summary: Lister les commandes du client
+      operationId: listerCommandes
+      parameters:
+        - $ref: '#/components/parameters/Limite'
+        - $ref: '#/components/parameters/Correlation'
+      responses:
+        '200':
+          description: Commandes du client, les plus récentes d'abord.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ResumeCommande' }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '500': { $ref: '#/components/responses/ErreurInterne' }
+
+  /api/service-ordering/v1/serviceOrder/{orderId}:
+    get:
+      tags: [Commandes]
+      summary: Suivre une commande (UC-05)
+      description: |
+        L'état de chaque élément vient de slice-management-service. S'il ne répond pas, la lecture
+        est dégradée : les éléments déjà transmis passent à UNKNOWN au lieu d'échouer la requête.
+      operationId: consulterCommande
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, maxLength: 32 }
+          example: SO-1001
+        - $ref: '#/components/parameters/Correlation'
+      responses:
+        '200':
+          description: La commande et l'état de ses éléments.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Commande' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '500': { $ref: '#/components/responses/ErreurInterne' }
+
+  /api/slice-management/v1/service:
+    get:
+      tags: [Services]
+      summary: Inventaire des services réseau d'un drone ou d'une commande
+      description: Un des deux paramètres est obligatoire.
+      operationId: inventaireServices
+      parameters:
+        - name: droneId
+          in: query
+          schema: { type: string, maxLength: 64 }
+          example: DRN-0231
+        - name: orderId
+          in: query
+          schema: { type: string, maxLength: 32 }
+          example: SO-1001
+        - $ref: '#/components/parameters/Correlation'
+      responses:
+        '200':
+          description: Services du client correspondant au filtre (liste vide si aucun).
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ServiceInstance' }
+        '400': { $ref: '#/components/responses/DonneesInvalides' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '500': { $ref: '#/components/responses/ErreurInterne' }
+
+components:
+  securitySchemes:
+    keycloak:
+      type: oauth2
+      description: Jeton d'accès Keycloak (realm candronex, audience candronex-api, durée 300 s).
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:8081/realms/candronex/protocol/openid-connect/token
+          scopes: {}
+
+  parameters:
+    Correlation:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      schema: { type: string, pattern: '^[A-Za-z0-9._-]{1,128}$' }
+    Limite:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 1000, default: 100 }
+
+  headers:
+    Correlation:
+      description: Identifiant de corrélation de la requête.
+      schema: { type: string }
+
+  responses:
+    DonneesInvalides:
+      description: Requête invalide.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erreur' }
+          example:
+            erreur: DONNEES_INVALIDES
+            message: 'imsi : 15 chiffres attendus'
+            correlationId: 3f2b8c1e-7d4a-4e9b-9a51-0c6d2e8f4b17
+    NonAuthentifie:
+      description: |
+        Jeton absent, expiré ou invalide. Rejeté par la passerelle : réponse sans corps.
+        Rejeté par le service : corps Erreur avec le code NON_AUTHENTIFIE.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erreur' }
+          example:
+            erreur: NON_AUTHENTIFIE
+            message: Jeton absent, expiré ou invalide.
+            correlationId: 3f2b8c1e-7d4a-4e9b-9a51-0c6d2e8f4b17
+    Introuvable:
+      description: Ressource inexistante ou appartenant à un autre client.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erreur' }
+          example:
+            erreur: INTROUVABLE
+            message: Commande introuvable.
+            correlationId: 3f2b8c1e-7d4a-4e9b-9a51-0c6d2e8f4b17
+    ErreurInterne:
+      description: |
+        Erreur interne (ERREUR_INTERNE). Si la passerelle n'obtient pas de réponse en 5 s,
+        elle répond 500 sans corps.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erreur' }
+
+  schemas:
+    Erreur:
+      type: object
+      required: [erreur, message, correlationId]
+      properties:
+        erreur: { type: string, description: Code d'erreur en français., example: INTROUVABLE }
+        message: { type: string }
+        correlationId: { type: string }
+
+    DroneEntrant:
+      type: object
+      required: [droneId, imsi, iccid, simType]
+      properties:
+        droneId: { type: string, minLength: 1, maxLength: 64, example: DRN-0231 }
+        imsi: { type: string, pattern: '^[0-9]{15}$', example: '302720123456789' }
+        iccid: { type: string, pattern: '^[0-9]{19,20}$', example: '8930272012345678901' }
+        simType: { type: string, enum: [SIM, ESIM] }
+
+    Drone:
+      type: object
+      required: [droneId, simType, status, registeredAt]
+      properties:
+        droneId: { type: string, example: DRN-0231 }
+        simType: { type: string, enum: [SIM, ESIM] }
+        status: { type: string, example: ACTIVE }
+        registeredAt: { type: string, format: date-time }
+
+    Specification:
+      type: object
+      required: [serviceType, name, characteristics]
+      properties:
+        serviceType: { type: string, example: C2 }
+        name: { type: string, example: Commande et contrôle (URLLC) }
+        characteristics: { $ref: '#/components/schemas/Caracteristiques' }
+
+    Caracteristiques:
+      type: object
+      description: Paramètres de la tranche réseau (S-NSSAI, DNN, QoS, débits).
+      properties:
+        sst: { type: integer, example: 2 }
+        sd: { type: string, example: '000001' }
+        dnn: { type: string, example: c2 }
+        fiveQi: { type: integer, example: 7 }
+        arp: { type: integer, example: 2 }
+        ambrUplink: { type: string, example: 20 Mbps }
+        ambrDownlink: { type: string, example: 20 Mbps }
+
+    CommandeEntrante:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 20
+          description: Une paire (droneId, serviceType) ne peut apparaître qu'une fois par commande.
+          items:
+            type: object
+            required: [droneId, serviceType]
+            properties:
+              droneId: { type: string, minLength: 1, maxLength: 64 }
+              serviceType: { type: string, minLength: 1, maxLength: 32 }
+      example:
+        items:
+          - { droneId: DRN-0231, serviceType: C2 }
+          - { droneId: DRN-0231, serviceType: IMAGERY }
+
+    CommandeAcceptee:
+      type: object
+      required: [orderId, state, acceptedAt, items]
+      properties:
+        orderId: { type: string, example: SO-1001 }
+        state: { type: string, enum: [ACKNOWLEDGED] }
+        acceptedAt: { type: string, format: date-time }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              orderItemId: { type: string, example: SOI-1001-1 }
+              droneId: { type: string }
+              serviceType: { type: string }
+              state: { type: string, enum: [PENDING] }
+
+    ResumeCommande:
+      type: object
+      properties:
+        orderId: { type: string, example: SO-1001 }
+        acceptedAt: { type: string, format: date-time }
+
+    Commande:
+      type: object
+      required: [orderId, state, acceptedAt, items]
+      properties:
+        orderId: { type: string, example: SO-1001 }
+        state:
+          type: string
+          description: |
+            État global dérivé des éléments : ACKNOWLEDGED (tous PENDING), IN_PROGRESS, COMPLETED (tous ACTIVE),
+            PARTIAL (au moins un ACTIVE et un FAILED), FAILED (tous FAILED), UNKNOWN (un élément illisible).
+          enum: [ACKNOWLEDGED, IN_PROGRESS, COMPLETED, PARTIAL, FAILED, UNKNOWN]
+        acceptedAt: { type: string, format: date-time }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ElementCommande' }
+
+    ElementCommande:
+      type: object
+      required: [orderItemId, droneId, serviceType, state]
+      properties:
+        orderItemId: { type: string, example: SOI-1001-1 }
+        droneId: { type: string, example: DRN-0231 }
+        serviceType: { type: string, example: C2 }
+        state: { $ref: '#/components/schemas/EtatElement' }
+        serviceId: { type: string, format: uuid, nullable: true }
+        failureCause: { $ref: '#/components/schemas/CauseEchec' }
+        activatedAt: { type: string, format: date-time, nullable: true }
+
+    EtatElement:
+      type: string
+      description: UNKNOWN seulement en lecture dégradée (slice-management-service indisponible).
+      enum: [PENDING, ACTIVATING, ACTIVE, FAILED, UNKNOWN]
+
+    CauseEchec:
+      type: string
+      nullable: true
+      description: |
+        NETWORK_REJECTED (refus du cœur réseau), NETWORK_INDETERMINATE (pas de réponse du réseau avant
+        l'échéance de 30 s), IDENTITY_UNRESOLVED (identité réseau du drone introuvable).
+      enum: [NETWORK_REJECTED, NETWORK_INDETERMINATE, IDENTITY_UNRESOLVED, null]
+
+    ServiceInstance:
+      type: object
+      required: [serviceId, orderItemId, orderId, droneId, serviceType, characteristics, state, acceptedAt]
+      properties:
+        serviceId: { type: string, format: uuid }
+        orderItemId: { type: string, example: SOI-1001-1 }
+        orderId: { type: string, example: SO-1001 }
+        droneId: { type: string, example: DRN-0231 }
+        serviceType: { type: string, example: C2 }
+        characteristics: { $ref: '#/components/schemas/Caracteristiques' }
+        state: { type: string, enum: [PENDING, ACTIVATING, ACTIVE, FAILED] }
+        failureCause: { $ref: '#/components/schemas/CauseEchec' }
+        acceptedAt: { type: string, format: date-time }
+        activatedAt: { type: string, format: date-time, nullable: true }

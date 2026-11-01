@@ -56,6 +56,7 @@ services:
     build: { context: ., dockerfile: services/drone-management-service/Dockerfile }
     environment:
       DATABASE_URL: postgresql://drone:${DRONE_DB_PASSWORD}@drone-db:5432/drone
+      WORKERS: ${DRONE_WORKERS:-2}  # processus uvicorn (même port, répartis par le noyau)
     networks: [backend, drone-data]
     depends_on:
       drone-db: { condition: service_healthy }
@@ -77,6 +78,7 @@ services:
     build: { context: ., dockerfile: services/service-ordering-service/Dockerfile }
     environment:
       DATABASE_URL: postgresql://ordering:${ORDERING_DB_PASSWORD}@ordering-db:5432/ordering
+      WORKERS: ${ORDERING_WORKERS:-4}
     networks: [backend, ordering-data]
     depends_on:
       ordering-db: { condition: service_healthy }
@@ -98,6 +100,7 @@ services:
     build: { context: ., dockerfile: services/slice-management-service/Dockerfile }
     environment:
       DATABASE_URL: postgresql://slice:${SLICE_DB_PASSWORD}@slice-db:5432/slice
+      WORKERS: ${SLICE_WORKERS:-4}
       NETWORK_ADAPTER: mock
       # MockOpen5GSAdapter : latence par activation et taux d'échec (énoncé : 300-1500 ms, 0 %)
       MOCK_LATENCE_MIN_MS: ${MOCK_LATENCE_MIN_MS:-300}

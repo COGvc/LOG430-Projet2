@@ -34,10 +34,31 @@ export const options = {
 
 const pad = (n, l) => String(n).padStart(l, '0');
 
-function jeton(clientId, secret) {
-  const r = http.post(TOKEN_URL, { grant_type: 'client_credentials', client_id: clientId, client_secret: secret });
-  if (r.status !== 200) throw new Error(`jeton ${clientId} : ${r.status}`);
-  return r.json('access_token');
+const CLIENTS = [
+  { id: 'inspectra-demo', secret: __ENV.INSPECTRA_DEMO_SECRET },
+  { id: 'aerotech-demo', secret: __ENV.AEROTECH_DEMO_SECRET },
+];
+
+// Jeton client credentials auprès de Keycloak (pas la passerelle), étiqueté à part : ce n'est pas une opération.
+// `renouveler` : instant (ms) où le client en redemande un, entre 60 s et 30 s avant l'expiration
+// (aléatoire pour étaler les demandes des VU).
+function jeton(client) {
+  const r = http.post(TOKEN_URL, { grant_type: 'client_credentials', client_id: client.id, client_secret: client.secret },
+    { tags: { op: 'jeton' } });
+  if (r.status !== 200) throw new Error(`jeton ${client.id} : ${r.status}`);
+  const marge = 30 + 30 * Math.random();
+  return { auth: r.json('access_token'), renouveler: Date.now() + (r.json('expires_in') - marge) * 1000 };
+}
+
+// Comme un vrai client B2B, chaque VU renouvelle son jeton avant l'expiration (durée fixée par le realm : 300 s).
+const jetons = {};
+function jetonValide(data, i) {
+  if (!jetons[i]) { // jeton de setup, échéance décalée par VU (jusqu'à 30 s plus tôt)
+    const j = data.clients[i].jeton;
+    jetons[i] = { auth: j.auth, renouveler: j.renouveler - 30000 * Math.random() };
+  }
+  if (Date.now() >= jetons[i].renouveler) jetons[i] = jeton(CLIENTS[i]);
+  return jetons[i].auth;
 }
 
 // Identifiants uniques par exécution : le test peut être relancé sans vider les bases.
@@ -56,15 +77,12 @@ function enregistrer(auth, droneId, id) {
 
 export function setup() {
   const run = Math.floor(Date.now() / 1000);
-  const clients = [
-    { auth: jeton('inspectra-demo', __ENV.INSPECTRA_DEMO_SECRET), drones: [] },
-    { auth: jeton('aerotech-demo', __ENV.AEROTECH_DEMO_SECRET), drones: [] },
-  ];
+  const clients = CLIENTS.map((c) => ({ jeton: jeton(c), drones: [] }));
   // Flotte initiale : les consultations et commandes visent des drones existants.
   clients.forEach((c, i) => {
     for (let n = 0; n < DRONES_PAR_CLIENT; n++) {
       const droneId = `F-${run}-${i}-${n}`; // F : flotte initiale (distincte des K- enregistrés pendant le test)
-      const r = enregistrer(c.auth, droneId, identite(run, 0, i * DRONES_PAR_CLIENT + n));
+      const r = enregistrer(c.jeton.auth, droneId, identite(run, 0, i * DRONES_PAR_CLIENT + n));
       if (r.status === 201) c.drones.push(droneId);
     }
   });
@@ -74,8 +92,10 @@ export function setup() {
 const commandes = []; // commandes créées par ce VU, pour les consulter
 
 export default function (data) {
-  const c = data.clients[exec.vu.idInTest % 2];
-  const auth = { Authorization: `Bearer ${c.auth}` };
+  const i = exec.vu.idInTest % 2;
+  const c = data.clients[i];
+  const jetonVu = jetonValide(data, i);
+  const auth = { Authorization: `Bearer ${jetonVu}` };
   const drone = c.drones[Math.floor(Math.random() * c.drones.length)];
   const tirage = Math.random();
 
@@ -105,7 +125,7 @@ export default function (data) {
   } else { // enregistrement d'un drone
     const s = exec.scenario.name === 'montee' ? 1 : 2;
     const n = exec.scenario.iterationInTest;
-    const r = enregistrer(c.auth, `K-${data.run}-${s}-${n}`, identite(data.run, s, n));
+    const r = enregistrer(jetonVu, `K-${data.run}-${s}-${n}`, identite(data.run, s, n));
     check(r, { 'drone 201': (x) => x.status === 201 });
   }
 }

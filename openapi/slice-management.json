@@ -1,0 +1,246 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "slice-management-service",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Sante",
+        "operationId": "sante_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/slice-management/v1/service": {
+      "get": {
+        "summary": "Services",
+        "description": "Inventaire (client, par la passerelle) et D3 (service-ordering-service, jeton transmis).",
+        "operationId": "services_api_slice_management_v1_service_get",
+        "parameters": [
+          {
+            "name": "droneId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Droneid"
+            }
+          },
+          {
+            "name": "orderId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 32
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Orderid"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/v1/activation": {
+      "post": {
+        "summary": "Demander Activation",
+        "description": "D2, sans jeton (H3) : jamais routé par la passerelle. Rejouer la même demande retourne le service existant.",
+        "operationId": "demander_activation_internal_v1_activation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemandeActivation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DemandeActivation": {
+        "properties": {
+          "orderItemId": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Orderitemid"
+          },
+          "orderId": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Orderid"
+          },
+          "clientId": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Clientid"
+          },
+          "droneId": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Droneid"
+          },
+          "serviceType": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Servicetype"
+          },
+          "characteristics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Characteristics"
+          },
+          "acceptedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Acceptedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "orderItemId",
+          "orderId",
+          "clientId",
+          "droneId",
+          "serviceType",
+          "characteristics",
+          "acceptedAt"
+        ],
+        "title": "DemandeActivation"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

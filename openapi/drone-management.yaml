@@ -1,0 +1,227 @@
+openapi: 3.1.0
+info:
+  title: drone-management-service
+  version: 0.1.0
+paths:
+  /health:
+    get:
+      summary: Sante
+      operationId: sante_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /api/drone-management/v1/drone:
+    post:
+      summary: Enregistrer
+      operationId: enregistrer_api_drone_management_v1_drone_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DroneEntrant'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DroneDTO'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      summary: Lister
+      operationId: lister_api_drone_management_v1_drone_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 100
+          title: Limit
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DroneDTO'
+                title: Response Lister Api Drone Management V1 Drone Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/drone-management/v1/drone/{drone_id}:
+    get:
+      summary: Consulter
+      operationId: consulter_api_drone_management_v1_drone__drone_id__get
+      parameters:
+      - name: drone_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Drone Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DroneDTO'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/v1/drone/{drone_id}/network-identity:
+    get:
+      summary: Identite Reseau
+      description: 'D4, sans jeton (H3) : jamais routé par la passerelle.'
+      operationId: identite_reseau_internal_v1_drone__drone_id__network_identity_get
+      parameters:
+      - name: drone_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Drone Id
+      - name: clientId
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Clientid
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    DroneDTO:
+      properties:
+        droneId:
+          type: string
+          title: Droneid
+        simType:
+          type: string
+          title: Simtype
+        status:
+          type: string
+          title: Status
+        registeredAt:
+          type: string
+          format: date-time
+          title: Registeredat
+      type: object
+      required:
+      - droneId
+      - simType
+      - status
+      - registeredAt
+      title: DroneDTO
+      description: 'Sans IMSI ni ICCID : construit depuis Drone, qui ne les porte pas.'
+    DroneEntrant:
+      properties:
+        droneId:
+          type: string
+          maxLength: 64
+          minLength: 1
+          title: Droneid
+        imsi:
+          type: string
+          title: Imsi
+        iccid:
+          type: string
+          title: Iccid
+        simType:
+          type: string
+          enum:
+          - SIM
+          - ESIM
+          title: Simtype
+      type: object
+      required:
+      - droneId
+      - imsi
+      - iccid
+      - simType
+      title: DroneEntrant
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError

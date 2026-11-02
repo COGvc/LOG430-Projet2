@@ -10,77 +10,73 @@ database "ordering-db" as ODB
 component "slice-management-service\n(D2 interne, D3 avec jeton)" as Slice
 
 package "drone-management-service" {
-  package "Entrée" as DIn #F0F0FF {
+  package "Entrée (main.py)" as DIn #F0F0FF {
     component "API /api/drone-management/v1\n(JWT : client et D1)" as DPub
     component "API interne /internal/v1\n(D4 : sans jeton)" as DInt
   }
-  package "Application" as DApp #FFFFF0 {
-    component "RegisterDrone\nGetDrone · ListDrones" as DUcPub
-    component "ResolveNetworkIdentity (D4)" as DUcInt
-    interface "DroneRepository" as DPRepo
+  package "Application (application.py)" as DApp #FFFFF0 {
+    component "GestionDrones\nenregistrer · consulter · lister\nresoudre_identite (D4)" as DUc
+    interface "DepotDrones" as DPRepo
   }
-  package "Domaine" as DDom #F0FFF0 {
-    component "Drone · NetworkIdentity\nImsi (masqué) · Iccid · SimType" as DEnt
+  package "Domaine (domain.py)" as DDom #F0FFF0 {
+    component "Drone · IdentiteReseau\nImsi (masqué) · Iccid · SimType" as DEnt
   }
-  package "Sortie" as DOut #FFF0F0 {
-    component "PostgresDroneRepository" as DARepo
+  package "Sortie (adapters_db.py)" as DOut #FFF0F0 {
+    component "DepotDronesPostgres" as DARepo
   }
 }
 
 package "service-ordering-service" {
-  package "Entrée" as OIn #F0F0FF {
+  package "Entrée (main.py)" as OIn #F0F0FF {
     component "API publique\n(JWT)" as OPub
-    component "Relance\n(boucle asyncio)" as ORelay
+    component "lifespan\n(assemblage, lance la relance)" as OBoot
   }
-  package "Module catalog" as Cat #FFFFF0 {
-    component "ListCatalog\nGetServiceSpecification" as CUc
+  package "Module catalogue (catalog.py)" as Cat #FFFFF0 {
+    component "Catalogue\nlister · specification\n(chargé en mémoire au démarrage)" as CUc
     component "ServiceSpecification" as CEnt
-    interface "CatalogRepository" as CPRepo
   }
-  package "Module ordering" as Ord #FFFFF0 {
-    component "PlaceOrder · GetOrder · ListOrders\nDispatchPendingItems" as OUc
-    component "Order · OrderItem\nderive_order_state()" as OEnt
-    interface "OrderRepository" as OPRepo
-    interface "DroneEligibilityPort (D1)" as PD1
-    interface "ActivationRequestPort (D2)" as PD2
-    interface "ServiceStatusPort (D3)" as PD3
-    interface "OrderIdGenerator · Clock" as PMisc
+  package "Application (application.py)" as Ord #FFFFF0 {
+    component "GestionCommandes\ncommander · consulter · lister" as OUc
+    component "Relance\n(tâche de fond, réveillée\nà chaque commande)" as ORelay
+    interface "DepotCommandes" as OPRepo
+    interface "EligibiliteDrone (D1)" as PD1
+    interface "DemandeActivation (D2)" as PD2
+    interface "EtatServices (D3)" as PD3
+  }
+  package "Domaine (domain.py)" as ODom #F0FFF0 {
+    component "Commande · ElementCommande\nempreinte · etat_global · recul" as OEnt
   }
   package "Sortie" as OOut #FFF0F0 {
-    component "PostgresOrderRepository\nPostgresCatalogRepository" as OARepo
-    component "HttpDroneEligibility" as AD1
-    component "CircuitBreaker → HttpActivationRequest" as AD2
-    component "HttpServiceStatus" as AD3
+    component "DepotCommandesPostgres\n(adapters_db.py)\ncharger (catalog_db.py)" as OARepo
+    component "EligibiliteDroneHttp" as AD1
+    component "DemandeActivationHttp\n(par un Disjoncteur)" as AD2
+    component "EtatServicesHttp" as AD3
   }
 }
 
 Client --> DPub
 Client --> OPub
 
-DPub --> DUcPub
-DInt --> DUcInt
-DUcPub --> DEnt
-DUcInt --> DEnt
-DUcPub --> DPRepo
-DUcInt --> DPRepo
+DPub --> DUc
+DInt --> DUc
+DUc --> DEnt
+DUc --> DPRepo
 DARepo ..|> DPRepo
 DARepo --> DDB
 
 OPub --> OUc
 OPub --> CUc
-ORelay --> OUc
+OBoot --> ORelay
+ORelay --> OPRepo
+ORelay --> PD2
 OUc --> OEnt
 OUc --> CUc : interface publique\ndu module seulement
 CUc --> CEnt
-CUc --> CPRepo
 OUc --> OPRepo
 OUc --> PD1
-OUc --> PD2
 OUc --> PD3
-OUc --> PMisc
-
 OARepo ..|> OPRepo
-OARepo ..|> CPRepo
+OARepo ..> CUc : alimente au démarrage
 AD1 ..|> PD1
 AD2 ..|> PD2
 AD3 ..|> PD3
@@ -90,4 +86,10 @@ AD1 --> DPub : D1 (jeton transmis)
 AD2 --> Slice : D2
 AD3 --> Slice : D3 (jeton transmis)
 Slice --> DInt : D4
+
+note bottom of ODom
+  Domaine : bibliothèque standard seulement.
+  Application : aucun adaptateur ni framework.
+  Vérifié par import-linter.
+end note
 @enduml

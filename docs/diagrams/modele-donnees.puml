@@ -4,90 +4,84 @@ hide methods
 skinparam classAttributeIconSize 0
 
 package "drone-management-service : drone-db" {
-  class Drone {
-    {key} clientId
-    {key} droneId
-    simType : SIM | ESIM
+  class "drone" as Drone {
+    {key} client_id
+    {key} drone_id
+    sim_type : SIM | ESIM
     status : ACTIVE
-    registeredAt
+    registered_at
   }
-  class IdentiteReseau <<sensible>> {
-    {key} clientId
-    {key} droneId
+  class "identite_reseau" as IdentiteReseau <<sensible>> {
+    {key} client_id
+    {key} drone_id
     imsi <<unique, 15 chiffres>>
     iccid <<unique, 19-20 chiffres>>
   }
-  Drone "1" -- "1" IdentiteReseau
+  Drone "1" -- "1" IdentiteReseau : FK (client_id, drone_id)
 }
 
 package "service-ordering-service : ordering-db" {
-  package "schéma catalogue" {
-    class SpecificationService {
-      {key} serviceType : C2 | IMAGERY
-      name
-      description
-    }
-    class CaracteristiqueParDefaut {
-      {key} serviceType
-      {key} name
-      value
-    }
-    SpecificationService "1" *-- "7" CaracteristiqueParDefaut
+  class "catalog_specification" as SpecificationService {
+    {key} service_type : C2 | IMAGERY
+    name
+    characteristics : jsonb
+    (sst, sd, dnn, fiveQi, arp,
+    ambrUplink, ambrDownlink)
   }
-  package "schéma commande" {
-    class Commande {
-      {key} orderId : SO-1001
-      clientId
-      acceptedAt
-      idempotencyKey
-      requestFingerprint
-      --
-      unique (clientId, idempotencyKey)
-    }
-    class ElementCommande {
-      {key} orderItemId : SOI-1001-1
-      orderId
-      droneId
-      serviceType
-      action : add
-      characteristics : copie figée
-      dispatchStatus : PENDING | DISPATCHED
-      dispatchAttempts
-      nextDispatchAt
-      --
-      unique (orderId, serviceType)
-    }
-    Commande "1" *-- "1..*" ElementCommande
+  class "service_order" as Commande {
+    {key} order_id : SO-1001 (séquence order_seq)
+    client_id
+    idempotency_key
+    request_fingerprint
+    accepted_at
+    --
+    unique (client_id, idempotency_key)
   }
+  class "order_item" as ElementCommande {
+    {key} order_item_id : SOI-1001-1
+    order_id
+    rang
+    drone_id
+    service_type
+    characteristics : jsonb, copie figée
+    dispatch_status : PENDING | DISPATCHED | REJECTED
+    dispatch_attempts
+    next_dispatch_at
+    --
+    unique (order_id, drone_id, service_type)
+  }
+  Commande "1" *-- "1..*" ElementCommande : FK order_id
 }
 
 package "slice-management-service : slice-db" {
-  class Service <<inventaire>> {
-    {key} serviceId
-    orderItemId <<unique : idempotence>>
-    orderId
-    clientId
-    droneId
-    serviceType
-    characteristics : copie reçue
+  class "service" as Service <<inventaire>> {
+    {key} service_id : uuid
+    order_item_id <<unique : idempotence>>
+    order_id
+    client_id
+    drone_id
+    service_type
+    characteristics : jsonb, copie reçue
     state : PENDING | ACTIVATING | ACTIVE | FAILED
-    failureCause
+    failure_cause
     attempts
-    nextAttemptAt
-    acceptedAt
-    startedAt
-    activatedAt
-    failedAt
+    next_attempt_at
+    accepted_at
+    received_at
+    started_at
+    activated_at
+    failed_at
   }
 }
 
-ElementCommande ..> Drone : droneId\n(référence, sans FK)
+ElementCommande ..> Drone : drone_id\n(référence, sans FK)
 ElementCommande ..> SpecificationService : valeurs copiées\nà la soumission
-Service ..> ElementCommande : orderItemId\n(référence, sans FK)
-Service ..> Drone : droneId\n(IMSI résolu à l'activation,\njamais stocké)
+Service ..> ElementCommande : order_item_id\n(référence, sans FK)
+Service ..> Drone : drone_id\n(IMSI résolu à l'activation,\njamais stocké)
 
 note bottom of Service
   Aucune colonne IMSI.
-  activatedAt − acceptedAt → P95 calculé dans slice-db.
+  activated_at − accepted_at → P95 calculé dans slice-db.
+  next_attempt_at sert aussi de bail pour un service ACTIVATING.
 end note
 @enduml

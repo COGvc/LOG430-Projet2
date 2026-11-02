@@ -11,85 +11,67 @@ component "drone-management-service\n(D4)" as Drone
 cloud "Cœur 5G\n(Phase 3 : Open5GS)" as Core
 
 package "slice-management-service" {
-
-  package "Adaptateurs d'entrée" as IN #F0F0FF {
-    component "API /api/slice-management/v1\n(FastAPI + validation JWT)" as HttpPub
-    component "API interne /internal/v1\n(FastAPI, sans jeton : H3)" as HttpInt
-    component "Traitement d'activation\n(N tâches asyncio)" as Worker
-    component "Démarrage" as Boot
+  package "Entrée (main.py)" as IN #F0F0FF {
+    component "API /api/slice-management/v1\nGET /service ?orderId | ?droneId\n(FastAPI + validation JWT)" as HttpPub
+    component "API interne /internal/v1\nPOST /activation → 202\n(sans jeton : H3)" as HttpInt
+    component "lifespan\n(assemblage, lance le traitement)" as Boot
   }
-
-  package "Application" as APP #FFFFF0 {
-    component "RegisterActivationRequest" as UcReg
-    component "ActivateNextDueService" as UcAct
-    component "GetServicesOfOrder" as UcOrd
-    component "GetDroneInventory" as UcInv
-    component "ResumeInterruptedActivations" as UcRes
-    component "Politiques\n(délai réseau 3 s, échéance 30 s, recul)" as Pol
-
-    interface "ServiceInventoryRepository" as PRepo
-    interface "DroneNetworkIdentityPort" as PId
-    interface "NetworkProvisioningPort" as PNet
-    interface "Clock" as PClock
+  package "Application (application.py)" as APP #FFFFF0 {
+    component "GestionServices\ndemander_activation · services" as UcGest
+    component "TraitementActivation\n(tâche de fond, jusqu'à 500 activations\nsimultanées, délai réseau 3 s)" as UcAct
+    interface "InventaireServices" as PRepo
+    interface "IdentiteReseauDrone (D4)" as PId
+    interface "NetworkProvisioningPort\n(reseau.py)" as PNet
   }
-
-  package "Domaine" as DOM #F0FFF0 {
-    component "ServiceInstance\n(transitions d'état)" as Ent
-    component "ServiceCharacteristics, Snssai, Dnn,\nQosProfile, Imsi (masqué), SliceConfiguration,\nProvisioningOutcome" as VO
+  package "Domaine (domain.py)" as DOM #F0FFF0 {
+    component "ServiceInstance\n(transitions d'état, échéance 30 s)" as Ent
+    component "Etat · CauseEchec · ProvisioningOutcome\nImsi (masqué) · SliceConfiguration (S-NSSAI, DNN,\n5QI, ARP, AMBR) · recul" as VO
   }
-
-  package "Adaptateurs de sortie" as OUT #FFF0F0 {
-    component "PostgresServiceInventory\n(asyncpg, SKIP LOCKED)" as ARepo
-    component "CircuitBreaker" as CB
-    component "HttpDroneNetworkIdentity\n(httpx, délai 1 s)" as AId
-    component "MockOpen5GSAdapter\n(latence, taux d'échec,\nécriture conditionnelle)" as AMock
+  package "Sortie" as OUT #FFF0F0 {
+    component "InventairePostgres\n(adapters_db.py : asyncpg,\nSKIP LOCKED, bail de 10 s)" as ARepo
+    component "Disjoncteur" as CB
+    component "IdentiteReseauHttp\n(main.py : httpx, délai 1 s)" as AId
+    component "MockOpen5GSAdapter\n(reseau.py : latence, taux d'échec,\nécriture conditionnelle)" as AMock
     component "Open5GSAdapter\n(Phase 3)" as AReal #DDDDDD
-    component "SystemClock" as AClock
   }
-
-  component "bootstrap\n(point d'assemblage)" as Wiring
 }
 
 Client --> HttpPub
 Ordering --> HttpInt : D2
 Ordering --> HttpPub : D3 (jeton)
 
-HttpPub --> UcInv
-HttpInt --> UcReg
-HttpPub --> UcOrd
-Worker --> UcAct
-Boot --> UcRes
+HttpPub --> UcGest
+HttpInt --> UcGest
+Boot --> UcAct
+Boot ..> OUT : construit et injecte\n(NETWORK_ADAPTER=mock)
 
-UcAct --> Pol
-UcReg --> Ent
+UcGest --> Ent
 UcAct --> Ent
 Ent --> VO
 
+UcGest --> PRepo
+UcGest ..> UcAct : réveil
 UcAct --> PRepo
 UcAct --> PId
 UcAct --> PNet
-UcAct --> PClock
-UcReg --> PRepo
-UcOrd --> PRepo
-UcInv --> PRepo
-UcRes --> PRepo
 
 ARepo ..|> PRepo
-CB ..|> PId
-CB --> AId : enveloppe
+AId ..|> PId
+AId --> CB : chaque appel passe\npar le disjoncteur
 AMock ..|> PNet
 AReal ..|> PNet
-AClock ..|> PClock
 
 ARepo --> DB
-AId --> Drone
+CB --> Drone
 AReal ..> Core
 
-Wiring ..> IN : construit
-Wiring ..> OUT : construit et injecte\n(NETWORK_ADAPTER=mock)
-
 note bottom of DOM
-  Le domaine n'importe que la bibliothèque standard.
+  Domaine : bibliothèque standard seulement.
+  Application : aucun adaptateur ni framework.
   Vérifié par import-linter.
+end note
+note bottom of ARepo
+  Reprise après redémarrage : un service resté
+  ACTIVATING redevient réclamable à la fin du bail.
 end note
 @enduml

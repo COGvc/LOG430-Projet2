@@ -8,9 +8,28 @@ IN_PROGRESS --> COMPLETED : tous les éléments ACTIVE
 IN_PROGRESS --> PARTIAL : tous terminaux,\n≥ 1 ACTIVE et ≥ 1 FAILED
 IN_PROGRESS --> FAILED : tous les éléments FAILED
 
+ACKNOWLEDGED --> COMPLETED : tous ACTIVE\nentre deux consultations
+ACKNOWLEDGED --> PARTIAL
+ACKNOWLEDGED --> FAILED
+
 COMPLETED --> [*]
 PARTIAL --> [*]
 FAILED --> [*]
+
+state UNKNOWN : lecture dégradée :\nslice-management-service\nne répond pas (D3)
+note right of UNKNOWN
+  Pas une étape du cycle de vie : n'importe quelle
+  consultation donne UNKNOWN si D3 échoue
+  (élément transmis → UNKNOWN; élément non
+  transmis → PENDING). La consultation suivante
+  retrouve l'état réel.
+end note
+
+note bottom of FAILED
+  Un élément refusé à la transmission
+  (dispatch REJECTED, refus définitif de D2)
+  compte comme FAILED.
+end note
 
 note right of PARTIAL
   Règle BVLOS : un échec n'est jamais masqué.

@@ -10,19 +10,19 @@ node "Hôte (poste de développement)" {
     package "réseau backend" as Backend #F5F5FF {
       component "api-gateway\nKrakenD CE 2.7\n:8080" as GW
       component "keycloak (fourni)\nrealm candronex\n:8080 interne" as KC
-      component "drone-management-service\nFastAPI :8000" as DS
-      component "service-ordering-service\nFastAPI :8000\n(API + relance)" as OS
-      component "slice-management-service\nFastAPI :8000\n(API + activation\n+ MockOpen5GSAdapter)" as SS
+      component "drone-management-service\nFastAPI :8000\n2 processus uvicorn" as DS
+      component "service-ordering-service\nFastAPI :8000\n4 processus uvicorn\n(API + relance)" as OS
+      component "slice-management-service\nFastAPI :8000\n4 processus uvicorn\n(API + activation\n+ MockOpen5GSAdapter)" as SS
     }
 
     package "réseau drone-data" as DData #F5FFF5 {
-      database "drone-db\nPostgreSQL" as DDB
+      database "drone-db\nPostgreSQL 16" as DDB
     }
     package "réseau ordering-data" as OData #F5FFF5 {
-      database "ordering-db\nPostgreSQL" as ODB
+      database "ordering-db\nPostgreSQL 16" as ODB
     }
     package "réseau slice-data" as SData #F5FFF5 {
-      database "slice-db\nPostgreSQL" as SDB
+      database "slice-db\nPostgreSQL 16" as SDB
     }
   }
 }
@@ -50,5 +50,9 @@ note bottom of SData
   Aucun port publié pour les services ni les bases.
   Chaque base n'est joignable que par son service
   (réseau privé partagé avec lui seul).
+  Processus uvicorn : DRONE_WORKERS, ORDERING_WORKERS,
+  SLICE_WORKERS (défauts 2, 4, 4). Chaque processus a
+  sa propre relance ou son propre traitement d'activation;
+  FOR UPDATE SKIP LOCKED les empêche de prendre le même élément.
 end note
 @enduml

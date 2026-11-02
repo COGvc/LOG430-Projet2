@@ -1,0 +1,365 @@
+{
+  "root_group": {
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [],
+    "checks": [
+        {
+          "name": "consultation 200",
+          "path": "::consultation 200",
+          "id": "ba7ccb6f8b3251a5101ed6407f0d9abe",
+          "passes": 118976,
+          "fails": 0
+        },
+        {
+          "name": "drone 201",
+          "path": "::drone 201",
+          "id": "e23e6eb1e171535af849686b92f3b504",
+          "passes": 19878,
+          "fails": 0
+        },
+        {
+          "fails": 0,
+          "name": "commande 201",
+          "path": "::commande 201",
+          "id": "2587d87282525fceaff8c8bd8de13b52",
+          "passes": 59445
+        }
+      ],
+    "name": ""
+  },
+  "options": {
+    "summaryTrendStats": [
+      "avg",
+      "med",
+      "p(90)",
+      "p(95)",
+      "p(99)",
+      "max"
+    ],
+    "summaryTimeUnit": "",
+    "noColor": false
+  },
+  "state": {
+    "isStdOutTTY": false,
+    "isStdErrTTY": false,
+    "testRunDurationMs": 360212.541751
+  },
+  "metrics": {
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 4,
+        "min": 0,
+        "max": 224
+      }
+    },
+    "http_reqs": {
+      "values": {
+        "count": 198801,
+        "rate": 551.8991621824841
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 600,
+        "min": 600,
+        "max": 600
+      }
+    },
+    "http_req_blocked": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.007585793914518225,
+        "med": 0.004037,
+        "p(90)": 0.00522,
+        "p(95)": 0.005942,
+        "p(99)": 0.021031,
+        "max": 24.148621
+      }
+    },
+    "http_req_sending": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.026965897520636193,
+        "med": 0.028806,
+        "p(90)": 0.037042,
+        "p(95)": 0.039507,
+        "p(99)": 0.062751,
+        "max": 9.35047
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 222486088,
+        "rate": 617652.2530795039
+      }
+    },
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 1,
+        "passes": 198299,
+        "fails": 0
+      }
+    },
+    "dropped_iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "thresholds": {
+        "count==0": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_connecting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 0,
+        "p(99)": 0,
+        "max": 24.099749,
+        "avg": 0.0028718587783763665,
+        "med": 0,
+        "p(90)": 0
+      }
+    },
+    "http_req_failed": {
+      "values": {
+        "passes": 0,
+        "fails": 198801,
+        "rate": 0
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": true
+        }
+      },
+      "type": "rate",
+      "contains": "default"
+    },
+    "data_received": {
+      "contains": "data",
+      "values": {
+        "count": 1651541041,
+        "rate": 4584907.102267533
+      },
+      "type": "counter"
+    },
+    "http_req_waiting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 7.640508157443877,
+        "med": 5.264614,
+        "p(90)": 8.985751,
+        "p(95)": 11.293907,
+        "p(99)": 34.618802,
+        "max": 1570.03715
+      }
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.08724503980362278,
+        "med": 0.053234,
+        "p(90)": 0.198195,
+        "p(95)": 0.249152,
+        "p(99)": 0.401596,
+        "max": 15.5771
+      }
+    },
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(99)": 34.938186,
+        "max": 1570.264911,
+        "avg": 7.754719094768043,
+        "med": 5.380448,
+        "p(90)": 9.123918,
+        "p(95)": 11.445782
+      }
+    },
+    "http_req_tls_handshaking": {
+      "values": {
+        "med": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "p(99)": 0,
+        "max": 0,
+        "avg": 0
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 7.935002156934548,
+        "med": 5.538643,
+        "p(90)": 9.346942,
+        "p(95)": 11.735197799999973,
+        "p(99)": 35.479613639999876,
+        "max": 1570.452301
+      }
+    },
+    "http_req_duration{expected_response:true}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 7.754719094768043,
+        "med": 5.380448,
+        "p(90)": 9.123918,
+        "p(95)": 11.445782,
+        "p(99)": 34.938186,
+        "max": 1570.264911
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 198299,
+        "rate": 550.5055405235609
+      }
+    }
+  },
+  "setup_data": {
+    "clients": [
+      {
+        "drones": [
+          "F-1793483947-0-0",
+          "F-1793483947-0-1",
+          "F-1793483947-0-2",
+          "F-1793483947-0-3",
+          "F-1793483947-0-4",
+          "F-1793483947-0-5",
+          "F-1793483947-0-6",
+          "F-1793483947-0-7",
+          "F-1793483947-0-8",
+          "F-1793483947-0-9",
+          "F-1793483947-0-10",
+          "F-1793483947-0-11",
+          "F-1793483947-0-12",
+          "F-1793483947-0-13",
+          "F-1793483947-0-14",
+          "F-1793483947-0-15",
+          "F-1793483947-0-16",
+          "F-1793483947-0-17",
+          "F-1793483947-0-18",
+          "F-1793483947-0-19",
+          "F-1793483947-0-20",
+          "F-1793483947-0-21",
+          "F-1793483947-0-22",
+          "F-1793483947-0-23",
+          "F-1793483947-0-24",
+          "F-1793483947-0-25",
+          "F-1793483947-0-26",
+          "F-1793483947-0-27",
+          "F-1793483947-0-28",
+          "F-1793483947-0-29",
+          "F-1793483947-0-30",
+          "F-1793483947-0-31",
+          "F-1793483947-0-32",
+          "F-1793483947-0-33",
+          "F-1793483947-0-34",
+          "F-1793483947-0-35",
+          "F-1793483947-0-36",
+          "F-1793483947-0-37",
+          "F-1793483947-0-38",
+          "F-1793483947-0-39",
+          "F-1793483947-0-40",
+          "F-1793483947-0-41",
+          "F-1793483947-0-42",
+          "F-1793483947-0-43",
+          "F-1793483947-0-44",
+          "F-1793483947-0-45",
+          "F-1793483947-0-46",
+          "F-1793483947-0-47",
+          "F-1793483947-0-48",
+          "F-1793483947-0-49"
+        ],
+        "jeton": {
+          "auth": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJJaElEUlcxV3puYWM3Z19iaF9wcGM5WmZiODVmd2w3eElLelVIV0dVRXR3In0.eyJleHAiOjE3OTM0ODQyNDcsImlhdCI6MTc5MzQ4Mzk0NywianRpIjoiZmViOTk2YTgtMDcwNi00ZDZjLWJiN2MtOWY2NDRiMDA1YmNmIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDgxL3JlYWxtcy9jYW5kcm9uZXgiLCJhdWQiOiJjYW5kcm9uZXgtYXBpIiwic3ViIjoiYjVjYTc1ZmMtMzkyYi00OTk3LTkzYTEtMWEzMWFjNjkwMzc4IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiaW5zcGVjdHJhLWRlbW8iLCJzY29wZSI6IiIsImNsaWVudEhvc3QiOiIxNzIuMTkuMC43IiwiY2xpZW50QWRkcmVzcyI6IjE3Mi4xOS4wLjciLCJjbGllbnRfaWQiOiJpbnNwZWN0cmEtZGVtbyJ9.gLBNkTQWE6QNSKIut1bTpTS6DQLCtFyZilu9PRo5FFchuncGvUTbrZVApA00pdWjP5mvDgGsm3zGzw45s3bo6C4bkC8k4cOIgyDFXb-5RofQjbO7JqY1RLoJfUcFS7X0lVd1Bpyx9RIIOYm4CnAG1dc6M5es6_ThlAXAdvJJUhgwQ44kGLgL3SCJi7I0MbhDdRO1ol0DSf3XkcylVzskCo-Diu6pWQX0K1Thv6w6aUtIrOCotHuKlngG6WiwGVqpBejTPPME5d1ef9ZO8vW5Run76_XIajuaqqT3QK1R__6vM5jK6uu0XoRfPIbyLXn4DyQDZ53AvvTuBdmKYYA1Pg",
+          "renouveler": 1793484203140.9653
+        }
+      },
+      {
+        "drones": [
+          "F-1793483947-1-0",
+          "F-1793483947-1-1",
+          "F-1793483947-1-2",
+          "F-1793483947-1-3",
+          "F-1793483947-1-4",
+          "F-1793483947-1-5",
+          "F-1793483947-1-6",
+          "F-1793483947-1-7",
+          "F-1793483947-1-8",
+          "F-1793483947-1-9",
+          "F-1793483947-1-10",
+          "F-1793483947-1-11",
+          "F-1793483947-1-12",
+          "F-1793483947-1-13",
+          "F-1793483947-1-14",
+          "F-1793483947-1-15",
+          "F-1793483947-1-16",
+          "F-1793483947-1-17",
+          "F-1793483947-1-18",
+          "F-1793483947-1-19",
+          "F-1793483947-1-20",
+          "F-1793483947-1-21",
+          "F-1793483947-1-22",
+          "F-1793483947-1-23",
+          "F-1793483947-1-24",
+          "F-1793483947-1-25",
+          "F-1793483947-1-26",
+          "F-1793483947-1-27",
+          "F-1793483947-1-28",
+          "F-1793483947-1-29",
+          "F-1793483947-1-30",
+          "F-1793483947-1-31",
+          "F-1793483947-1-32",
+          "F-1793483947-1-33",
+          "F-1793483947-1-34",
+          "F-1793483947-1-35",
+          "F-1793483947-1-36",
+          "F-1793483947-1-37",
+          "F-1793483947-1-38",
+          "F-1793483947-1-39",
+          "F-1793483947-1-40",
+          "F-1793483947-1-41",
+          "F-1793483947-1-42",
+          "F-1793483947-1-43",
+          "F-1793483947-1-44",
+          "F-1793483947-1-45",
+          "F-1793483947-1-46",
+          "F-1793483947-1-47",
+          "F-1793483947-1-48",
+          "F-1793483947-1-49"
+        ],
+        "jeton": {
+          "auth": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJJaElEUlcxV3puYWM3Z19iaF9wcGM5WmZiODVmd2w3eElLelVIV0dVRXR3In0.eyJleHAiOjE3OTM0ODQyNDcsImlhdCI6MTc5MzQ4Mzk0NywianRpIjoiOTg4ZTFjN2YtMjQ1OS00MjNiLWFjMTUtMmUwYmE5ODIyYmY2IiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDgxL3JlYWxtcy9jYW5kcm9uZXgiLCJhdWQiOiJjYW5kcm9uZXgtYXBpIiwic3ViIjoiYjAwN2NjMTYtOTRiNy00N2NkLThhNGMtZDdmMzcxZmIwMTc2IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiYWVyb3RlY2gtZGVtbyIsInNjb3BlIjoiIiwiY2xpZW50SG9zdCI6IjE3Mi4xOS4wLjciLCJjbGllbnRBZGRyZXNzIjoiMTcyLjE5LjAuNyIsImNsaWVudF9pZCI6ImFlcm90ZWNoLWRlbW8ifQ.ExSMNgxMHvtqPGVja2VMa_pi9pyn4RbJOZDkC4K0jLGVqAypbjOINp7p3dIxyj7qrwK4KdjVvuAMmMFSTjowmjica91TnfcUXckL78RE8H3VZpitbuLc4Fa-SUw6VgPXNgpX8ITzBEIWn1cKbOOK0aqARp0yErv6h4a1sja0ip-gD4T14X1cmUFkAQcYKWrkO9PygC_SBMX-CLNunMfPdLsvaD1rvERle1U-q8opnpnAXfUDR0A43ZRfZKkXqBVfpftuY9yY-IbbORekskfkkBYq7kAfK4be0FaVVKb61UsbcWwCD-n2q-YAujjjr77ePrGB7VWEJd3YFVPi3bo3_Q",
+          "renouveler": 1793484190544.191
+        }
+      }
+    ],
+    "run": 1793483947
+  }
+}

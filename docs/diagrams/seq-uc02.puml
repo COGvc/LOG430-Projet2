@@ -14,9 +14,9 @@ KC --> Client : 200 access_token (JWT : iss, exp, aud=candronex-api, azp=inspect
 
 == Appel métier ==
 Client -> GW : POST /api/drone-management/v1/drone\nAuthorization: Bearer <JWT>\n{ droneId: DRN-0231, imsi, iccid, simType }
-GW -> GW : routage, CORS,\nX-Correlation-Id (généré si absent)
+GW -> GW : valider le JWT (signature, exp, iss, aud),\nroutage, CORS
 GW -> DS : même requête\nAuthorization transmis inchangé + X-Correlation-Id
-DS -> DS : valider le JWT (signature, exp, iss, aud)\nclientId = azp
+DS -> DS : revalider le JWT, clientId = azp\nX-Correlation-Id créé si absent
 DS -> DS : valider le drone\n(IMSI 15 chiffres, ICCID 19-20, simType)
 DS -> DDB : INSERT drone + identité réseau\n(une transaction)
 alt (clientId, droneId) ou IMSI déjà présent

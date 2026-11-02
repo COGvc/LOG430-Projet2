@@ -3,23 +3,30 @@ title CanDroneX — Contextes → microservices → bases (Phase 2)
 skinparam componentStyle rectangle
 
 package "drone-management-service" as DS {
+  interface "/api/drone-management/v1" as API_D
   component "Gestion des drones" as C_Drones
   database "drone-db\n(drones, IMSI, ICCID)" as DB_Drones
 }
 
 package "service-ordering-service" as OS {
+  interface "/api/service-ordering/v1" as API_O
   component "Catalogue de services" as C_Catalogue
   component "Commande de services" as C_Commande
   database "ordering-db\n(spécifications, commandes,\néléments, clés d'idempotence)" as DB_Ordering
 }
 
 package "slice-management-service" as SS {
+  interface "/api/slice-management/v1" as API_S
   component "Activation" as C_Activation
   component "Inventaire de services" as C_Inventaire
   component "NetworkProvisioningPort\n+ MockOpen5GSAdapter" as Port
   database "slice-db\n(services, états, causes,\nacceptedAt, activatedAt)" as DB_Slice
 }
 
+API_D -- C_Drones
+API_O -- C_Catalogue
+API_O -- C_Commande
+API_S -- C_Inventaire
 C_Drones --> DB_Drones
 C_Catalogue --> DB_Ordering
 C_Commande --> DB_Ordering

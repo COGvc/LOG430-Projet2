@@ -4,6 +4,7 @@ title État d'un service commandé (un par élément de commande) — Phase 2
 [*] --> PENDING : demande d'activation reçue\n/ acceptedAt (de la commande)\n[idempotente sur l'élément de commande]
 
 PENDING --> ACTIVATING : prise en charge\n/ startedAt
+ACTIVATING --> PENDING : drone-management-service indisponible\n/ attempts + 1, nouvel essai après recul
 
 ACTIVATING --> ACTIVE : réseau confirme l'abonnement\n/ activatedAt
 ACTIVATING --> FAILED : réseau refuse\n/ cause = NETWORK_REJECTED

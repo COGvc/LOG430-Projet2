@@ -1,4 +1,4 @@
-"""Format d'erreur uniforme : {"erreur", "message", "correlationId"} (conception, étape 6 §4)."""
+"""Format d'erreur uniforme : {"erreur", "message", "correlationId"}."""
 import logging
 
 from fastapi import FastAPI, Request

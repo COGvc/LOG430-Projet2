@@ -23,7 +23,7 @@ class EligibiliteDroneHttp:
 
 
 class DemandeActivationHttp:
-    """D2 : endpoint interne, sans jeton (H3), derrière un disjoncteur."""
+    """D2 : endpoint interne, sans jeton (ADR-002), derrière un disjoncteur."""
 
     def __init__(self, client: httpx.AsyncClient, disjoncteur: Disjoncteur):
         self.client, self.disjoncteur = client, disjoncteur

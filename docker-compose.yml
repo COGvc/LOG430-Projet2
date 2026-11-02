@@ -1,6 +1,6 @@
 # CanDroneX Phase 2 — microservices.
 # Seuls la passerelle (8080) et Keycloak (8081, pour obtenir un jeton) sont publiés sur l'hôte.
-# Chaque base est sur un réseau privé partagé avec son seul service (conception, étape 6 §8).
+# Chaque base est sur un réseau privé partagé avec son seul service.
 
 x-service-commun: &service-commun
   restart: unless-stopped

@@ -21,7 +21,7 @@ class DroneIntrouvable(Exception):
 
 @dataclass(frozen=True)
 class Imsi:
-    """15 chiffres. Sa représentation est masquée : un journal ne peut pas divulguer l'IMSI (H4)."""
+    """15 chiffres. Sa représentation est masquée : un journal ne peut pas divulguer l'IMSI."""
     valeur: str
 
     def __post_init__(self):

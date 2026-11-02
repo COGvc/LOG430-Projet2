@@ -101,7 +101,7 @@ def test_lecture_degradee_si_slice_management_service_indisponible():
     (["PENDING", "PENDING"], "ACKNOWLEDGED"),
     (["ACTIVE", "ACTIVATING"], "IN_PROGRESS"),
     (["ACTIVE", "ACTIVE"], "COMPLETED"),
-    (["ACTIVE", "FAILED"], "PARTIAL"),  # un échec n'est jamais masqué (H6)
+    (["ACTIVE", "FAILED"], "PARTIAL"),  # un échec n'est jamais masqué
     (["FAILED", "FAILED"], "FAILED"),
     (["ACTIVE", "UNKNOWN"], "UNKNOWN"),
 ])

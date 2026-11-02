@@ -33,7 +33,7 @@ CREATE INDEX IF NOT EXISTS order_item_order ON order_item (order_id);
 CREATE INDEX IF NOT EXISTS order_item_a_transmettre ON order_item (next_dispatch_at) WHERE dispatch_status = 'PENDING';
 """
 
-BAIL = timedelta(seconds=30)  # I7 : un élément réservé et non traité redevient disponible après 30 s
+BAIL = timedelta(seconds=30)  # Un élément réservé et non traité redevient disponible après 30 s
 
 
 def _element(r) -> ElementCommande:

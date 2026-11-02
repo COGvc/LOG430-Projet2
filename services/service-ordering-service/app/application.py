@@ -56,7 +56,7 @@ class GestionCommandes:
     def __init__(self, depot: DepotCommandes, catalogue: Catalogue, drones: EligibiliteDrone,
                  etat_services: EtatServices, nouvelle_commande: asyncio.Event):
         self.depot, self.catalogue, self.drones, self.etat_services = depot, catalogue, drones, etat_services
-        self.nouvelle_commande = nouvelle_commande  # réveille la relance (I8)
+        self.nouvelle_commande = nouvelle_commande  # réveille la relance
 
     async def commander(self, client_id: str, cle: str, lignes: list[LigneDemandee]) -> tuple[Commande, bool]:
         """UC-04. Retourne (commande, créée?). Aucun appel à slice-management-service."""

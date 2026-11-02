@@ -60,7 +60,7 @@ paths:
   /internal/v1/activation:
     post:
       summary: Demander Activation
-      description: 'D2, sans jeton (H3) : jamais routé par la passerelle. Rejouer la même demande retourne le service
+      description: 'D2, sans jeton (ADR-002) : jamais routé par la passerelle. Rejouer la même demande retourne le service
         existant.'
       operationId: demander_activation_internal_v1_activation_post
       requestBody:

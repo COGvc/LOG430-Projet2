@@ -37,7 +37,7 @@ class ElementCommande:
     order_item_id: str
     drone_id: str
     service_type: str
-    characteristics: dict  # figées à la commande (H5)
+    characteristics: dict  # figées à la commande
     dispatch_status: str = "PENDING"  # PENDING | DISPATCHED | REJECTED
 
 
@@ -72,7 +72,7 @@ def numero_element(order_id: str, rang: int) -> str:
     return f"SOI-{order_id.removeprefix('SO-')}-{rang}"
 
 
-# --- État global, dérivé de l'état de chaque élément (H6 : jamais d'échec masqué) ---
+# --- État global, dérivé de l'état de chaque élément (jamais d'échec masqué) ---
 
 TERMINAUX = {"ACTIVE", "FAILED"}
 
@@ -91,7 +91,7 @@ def etat_global(etats: list[str]) -> str:
     return "IN_PROGRESS"
 
 
-# --- Politique de reprise de la relance (étape 4) ---
+# --- Politique de reprise de la relance ---
 
 def recul(tentatives: int, base_s: float = 0.2, plafond_s: float = 5.0) -> timedelta:
     """200 ms × 2^n plafonné à 5 s, avec une part aléatoire (entre la moitié et la totalité)."""

@@ -1,4 +1,4 @@
-"""Génère krakend.json (routes publiques de la conception, étape 6 §2).
+"""Génère krakend.json (routes publiques).
 
     python krakend/generer.py > krakend/krakend.json
 

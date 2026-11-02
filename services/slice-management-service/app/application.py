@@ -13,7 +13,7 @@ from .domain import (CauseEchec, Etat, IdentiteIntrouvable, Imsi, ProvisioningOu
                      SliceConfiguration, recul)
 from .reseau import NetworkProvisioningPort
 
-DELAI_RESEAU_S = 3.0  # politique de l'application, pas de l'adaptateur (étape 5 §3.5)
+DELAI_RESEAU_S = 3.0  # politique de l'application, pas de l'adaptateur
 
 
 class InventaireServices(Protocol):

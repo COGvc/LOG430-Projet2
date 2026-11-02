@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 
-ECHEANCE_ACTIVATION = timedelta(seconds=30)  # après acceptedAt (étape 4)
+ECHEANCE_ACTIVATION = timedelta(seconds=30)  # après acceptedAt
 
 
 class TransitionIllegale(Exception):
@@ -37,7 +37,7 @@ class ProvisioningOutcome(str, Enum):
 
 @dataclass(frozen=True)
 class Imsi:
-    """15 chiffres. Représentation masquée (H4); la valeur complète ne sert qu'à l'adaptateur réseau."""
+    """15 chiffres. Représentation masquée; la valeur complète ne sert qu'à l'adaptateur réseau."""
     valeur: str
 
     def __post_init__(self):
@@ -52,7 +52,7 @@ class Imsi:
 
 @dataclass(frozen=True)
 class SliceConfiguration:
-    """Ce qu'on écrit dans le réseau : l'abonné + les caractéristiques figées à la commande (H5)."""
+    """Ce qu'on écrit dans le réseau : l'abonné + les caractéristiques figées à la commande."""
     imsi: Imsi
     sst: int
     sd: str
@@ -89,7 +89,7 @@ class ServiceInstance:
     activated_at: datetime | None = None
     failed_at: datetime | None = None
 
-    # Les seules transitions permises (étape 1). ACTIVATING est posé par la réservation (dépôt).
+    # Les seules transitions permises. ACTIVATING est posé par la réservation (dépôt).
     def activer(self, maintenant: datetime) -> None:
         self._exiger(Etat.ACTIVATING)
         self.state, self.activated_at = Etat.ACTIVE, maintenant

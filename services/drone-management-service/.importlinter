@@ -1,4 +1,4 @@
-# Règles de dépendance de l'architecture hexagonale (conception, étape 5 §8.2).
+# Règles de dépendance de l'architecture hexagonale.
 [importlinter]
 root_package = app
 include_external_packages = True

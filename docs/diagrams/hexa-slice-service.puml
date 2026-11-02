@@ -13,7 +13,7 @@ cloud "Cœur 5G\n(Phase 3 : Open5GS)" as Core
 package "slice-management-service" {
   package "Entrée (main.py)" as IN #F0F0FF {
     component "API /api/slice-management/v1\nGET /service ?orderId | ?droneId\n(FastAPI + validation JWT)" as HttpPub
-    component "API interne /internal/v1\nPOST /activation → 202\n(sans jeton : H3)" as HttpInt
+    component "API interne /internal/v1\nPOST /activation → 202\n(sans jeton : ADR-002)" as HttpInt
     component "lifespan\n(assemblage, lance le traitement)" as Boot
   }
   package "Application (application.py)" as APP #FFFFF0 {

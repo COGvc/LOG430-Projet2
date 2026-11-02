@@ -1,4 +1,4 @@
-"""Adaptateur de sortie PostgreSQL (asyncpg) : l'inventaire des services. Aucune colonne IMSI (H4)."""
+"""Adaptateur de sortie PostgreSQL (asyncpg) : l'inventaire des services. Aucune colonne IMSI."""
 import json
 from datetime import timedelta
 
@@ -30,8 +30,8 @@ CREATE INDEX IF NOT EXISTS service_commande ON service (client_id, order_id);
 CREATE INDEX IF NOT EXISTS service_drone ON service (client_id, drone_id);
 """
 
-# I7 : un service réservé dont le traitement a disparu (redémarrage) redevient disponible après le bail.
-# Cela couvre aussi la reprise au redémarrage (Q3) : aucun traitement spécial au démarrage.
+# Un service réservé dont le traitement a disparu (redémarrage) redevient disponible après le bail.
+# Cela couvre aussi la reprise au redémarrage : aucun traitement spécial au démarrage.
 BAIL = timedelta(seconds=10)
 
 

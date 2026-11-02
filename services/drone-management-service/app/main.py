@@ -88,7 +88,7 @@ interne = APIRouter(prefix="/internal/v1")
 
 @interne.get("/drone/{drone_id}/network-identity")
 async def identite_reseau(drone_id: str, clientId: str):
-    """D4, sans jeton (H3) : jamais routé par la passerelle."""
+    """D4, sans jeton (ADR-002) : jamais routé par la passerelle."""
     try:
         imsi = await gestion.resoudre_identite(clientId, drone_id)
     except DroneIntrouvable:

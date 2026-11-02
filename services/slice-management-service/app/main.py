@@ -24,7 +24,7 @@ DRONE_URL = os.environ.get("DRONE_URL", "http://drone-management-service:8000")
 
 
 class IdentiteReseauHttp:
-    """D4 : endpoint interne de drone-management-service, sans jeton (H3), derrière un disjoncteur."""
+    """D4 : endpoint interne de drone-management-service, sans jeton (ADR-002), derrière un disjoncteur."""
 
     def __init__(self, client: httpx.AsyncClient, disjoncteur: Disjoncteur):
         self.client, self.disjoncteur = client, disjoncteur
@@ -109,7 +109,7 @@ interne = APIRouter(prefix="/internal/v1")
 
 @interne.post("/activation", status_code=202)
 async def demander_activation(d: DemandeActivation, response: Response):
-    """D2, sans jeton (H3) : jamais routé par la passerelle. Rejouer la même demande retourne le service existant."""
+    """D2, sans jeton (ADR-002) : jamais routé par la passerelle. Rejouer la même demande retourne le service existant."""
     s, cree = await gestion.demander_activation(d.orderItemId, d.orderId, d.clientId, d.droneId, d.serviceType,
                                                 d.characteristics, d.acceptedAt)
     if not cree:

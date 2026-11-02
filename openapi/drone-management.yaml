@@ -117,7 +117,7 @@ paths:
   /internal/v1/drone/{drone_id}/network-identity:
     get:
       summary: Identite Reseau
-      description: 'D4, sans jeton (H3) : jamais routé par la passerelle.'
+      description: 'D4, sans jeton (ADR-002) : jamais routé par la passerelle.'
       operationId: identite_reseau_internal_v1_drone__drone_id__network_identity_get
       parameters:
       - name: drone_id
